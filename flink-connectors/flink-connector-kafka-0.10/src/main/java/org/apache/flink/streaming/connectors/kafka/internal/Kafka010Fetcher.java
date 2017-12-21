@@ -31,6 +31,7 @@ import org.apache.flink.util.SerializedValue;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 
+import java.util.Date;
 import java.util.Map;
 import java.util.Properties;
 
@@ -43,6 +44,7 @@ import java.util.Properties;
  * @param <T> The type of elements produced by the fetcher.
  */
 public class Kafka010Fetcher<T> extends Kafka09Fetcher<T> {
+	private Date startupDate;
 
 	public Kafka010Fetcher(
 			SourceContext<T> sourceContext,
@@ -57,7 +59,8 @@ public class Kafka010Fetcher<T> extends Kafka09Fetcher<T> {
 			KeyedDeserializationSchema<T> deserializer,
 			Properties kafkaProperties,
 			long pollTimeout,
-			boolean useMetrics) throws Exception {
+			boolean useMetrics,
+			Date startupDate) throws Exception {
 		super(
 				sourceContext,
 				assignedPartitionsWithInitialOffsets,
@@ -72,6 +75,7 @@ public class Kafka010Fetcher<T> extends Kafka09Fetcher<T> {
 				kafkaProperties,
 				pollTimeout,
 				useMetrics);
+		this.startupDate = startupDate;
 	}
 
 	@Override
@@ -91,7 +95,7 @@ public class Kafka010Fetcher<T> extends Kafka09Fetcher<T> {
 	 */
 	@Override
 	protected KafkaConsumerCallBridge010 createCallBridge() {
-		return new KafkaConsumerCallBridge010();
+		return new KafkaConsumerCallBridge010(startupDate);
 	}
 
 	@Override
