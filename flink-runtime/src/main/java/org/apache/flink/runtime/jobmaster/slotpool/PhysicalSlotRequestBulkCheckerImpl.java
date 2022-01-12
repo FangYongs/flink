@@ -73,7 +73,7 @@ public class PhysicalSlotRequestBulkCheckerImpl implements PhysicalSlotRequestBu
 
     private void schedulePendingRequestBulkWithTimestampCheck(
             final PhysicalSlotRequestBulkWithTimestamp bulk, final Time timeout) {
-        componentMainThreadExecutor.schedule(
+        componentMainThreadExecutor.getMainScheduledExecutor().schedule(
                 () -> {
                     TimeoutCheckResult result = checkPhysicalSlotRequestBulkTimeout(bulk, timeout);
 

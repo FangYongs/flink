@@ -111,7 +111,7 @@ public class PhysicalSlotRequestBulkCheckerImplTest extends TestLogger {
 
     private static void checkNotCancelledAfter(CompletableFuture<?> cancellationFuture, long milli)
             throws ExecutionException, InterruptedException {
-        mainThreadExecutor.schedule(() -> {}, milli, TimeUnit.MILLISECONDS).get();
+        mainThreadExecutor.getMainScheduledExecutor().schedule(() -> {}, milli, TimeUnit.MILLISECONDS).get();
         try {
             assertThat(cancellationFuture.isDone(), is(false));
             cancellationFuture.get(milli, TimeUnit.MILLISECONDS);

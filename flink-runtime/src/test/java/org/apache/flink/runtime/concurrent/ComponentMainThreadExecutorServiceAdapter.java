@@ -18,6 +18,8 @@
 
 package org.apache.flink.runtime.concurrent;
 
+import org.apache.flink.api.common.time.Time;
+import org.apache.flink.runtime.rpc.MainThreadExecutable;
 import org.apache.flink.runtime.rpc.MainThreadValidatorUtil;
 import org.apache.flink.runtime.testutils.DirectScheduledExecutorService;
 import org.apache.flink.util.concurrent.ScheduledExecutor;
@@ -43,6 +45,11 @@ public class ComponentMainThreadExecutorServiceAdapter implements ComponentMainT
     /** A runnable that should assert that the current thread is the expected main thread. */
     private final Runnable mainThreadCheck;
 
+    /**
+     * The {@link MainScheduledExecutor} manages the scheduled tasks and execute them in scheduledExecutor after special time.
+     */
+    private final MainScheduledExecutor mainScheduledExecutor;
+
     public ComponentMainThreadExecutorServiceAdapter(
             final ScheduledExecutorService scheduledExecutorService, final Thread mainThread) {
         this(new ScheduledExecutorServiceAdapter(scheduledExecutorService), mainThread);
@@ -55,6 +62,7 @@ public class ComponentMainThreadExecutorServiceAdapter implements ComponentMainT
                 () -> {
                     assert MainThreadValidatorUtil.isRunningInExpectedThread(mainThread);
                 };
+        this.mainScheduledExecutor = new MainScheduledExecutor(new TestingScheduledMainThreadExecutable(scheduledExecutor));
     }
 
     public static ComponentMainThreadExecutor forMainThread() {
@@ -88,7 +96,7 @@ public class ComponentMainThreadExecutorServiceAdapter implements ComponentMainT
 
     @Override
     public ScheduledExecutor getMainScheduledExecutor() {
-        throw new UnsupportedOperationException();
+        return mainScheduledExecutor;
     }
 
     @Override
@@ -124,5 +132,31 @@ public class ComponentMainThreadExecutorServiceAdapter implements ComponentMainT
     @Override
     public void execute(final Runnable command) {
         scheduledExecutor.execute(command);
+    }
+
+    /**
+     * Main thread executor with given {@link ScheduledExecutor} to execute the task.
+     */
+    private static class TestingScheduledMainThreadExecutable implements MainThreadExecutable {
+        private final ScheduledExecutor scheduledExecutor;
+
+        TestingScheduledMainThreadExecutable(ScheduledExecutor scheduledExecutor) {
+            this.scheduledExecutor = scheduledExecutor;
+        }
+
+        @Override
+        public void runAsync(Runnable runnable) {
+            scheduledExecutor.execute(runnable);
+        }
+
+        @Override
+        public <V> CompletableFuture<V> callAsync(Callable<V> callable, Time callTimeout) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void scheduleRunAsync(Runnable runnable, long delay) {
+            throw new UnsupportedOperationException();
+        }
     }
 }

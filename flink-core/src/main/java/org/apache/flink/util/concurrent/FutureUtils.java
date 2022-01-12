@@ -567,6 +567,25 @@ public class FutureUtils {
     }
 
     /**
+     * Times the given future out after the timeout in the given main scheduled executor.
+     *
+     * @param future to time out
+     * @param timeout after which the given future is timed out
+     * @param timeUnit time unit of the timeout
+     * @param mainScheduledExecutor the main scheduled executor that will complete the future exceptionally after the
+     *     timeout is reached
+     * @param <T> type of the given future
+     * @return The timeout enriched future
+     */
+    public static <T> CompletableFuture<T> orTimeoutMainExecutor(
+            CompletableFuture<T> future,
+            long timeout,
+            TimeUnit timeUnit,
+            ScheduledExecutor mainScheduledExecutor) {
+        return orTimeoutMainExecutor(future, timeout, timeUnit, mainScheduledExecutor, null);
+    }
+
+    /**
      * Times the given future out after the timeout.
      *
      * @param future to time out
@@ -592,6 +611,38 @@ public class FutureUtils {
                             timeout,
                             timeUnit);
 
+            future.whenComplete(
+                    (T value, Throwable throwable) -> {
+                        if (!timeoutFuture.isDone()) {
+                            timeoutFuture.cancel(false);
+                        }
+                    });
+        }
+
+        return future;
+    }
+
+    /**
+     * Times the given future out after the timeout in the given main scheduled executor.
+     *
+     * @param future to time out
+     * @param timeout after which the given future is timed out
+     * @param timeUnit time unit of the timeout
+     * @param mainScheduledExecutor the main scheduled executor that will complete the future exceptionally after the
+     *     timeout is reached
+     * @param timeoutMsg timeout message for exception
+     * @param <T> type of the given future
+     * @return The timeout enriched future
+     */
+    public static <T> CompletableFuture<T> orTimeoutMainExecutor(
+            CompletableFuture<T> future,
+            long timeout,
+            TimeUnit timeUnit,
+            ScheduledExecutor mainScheduledExecutor,
+            @Nullable String timeoutMsg) {
+
+        if (!future.isDone()) {
+            final ScheduledFuture<?> timeoutFuture = mainScheduledExecutor.schedule(new Timeout(future, timeoutMsg), timeout, timeUnit);
             future.whenComplete(
                     (T value, Throwable throwable) -> {
                         if (!timeoutFuture.isDone()) {

@@ -96,11 +96,11 @@ public class DeclarativeSlotPoolBridge extends DeclarativeSlotPoolService implem
 
         getDeclarativeSlotPool().registerNewSlotsListener(this::newSlotsAreAvailable);
 
-        componentMainThreadExecutor.schedule(
+        componentMainThreadExecutor.getMainScheduledExecutor().schedule(
                 this::checkIdleSlotTimeout,
                 idleSlotTimeout.toMilliseconds(),
                 TimeUnit.MILLISECONDS);
-        componentMainThreadExecutor.schedule(
+        componentMainThreadExecutor.getMainScheduledExecutor().schedule(
                 this::checkBatchSlotTimeout,
                 batchSlotTimeout.toMilliseconds(),
                 TimeUnit.MILLISECONDS);
@@ -269,11 +269,11 @@ public class DeclarativeSlotPoolBridge extends DeclarativeSlotPoolService implem
         if (timeout == null) {
             return pendingRequest.getSlotFuture();
         } else {
-            return FutureUtils.orTimeout(
+            return FutureUtils.orTimeoutMainExecutor(
                             pendingRequest.getSlotFuture(),
                             timeout.toMilliseconds(),
                             TimeUnit.MILLISECONDS,
-                            componentMainThreadExecutor)
+                            componentMainThreadExecutor.getMainScheduledExecutor())
                     .whenComplete(
                             (physicalSlot, throwable) -> {
                                 if (throwable instanceof TimeoutException) {
@@ -400,7 +400,7 @@ public class DeclarativeSlotPoolBridge extends DeclarativeSlotPoolService implem
         getDeclarativeSlotPool().releaseIdleSlots(getRelativeTimeMillis());
 
         if (componentMainThreadExecutor != null) {
-            componentMainThreadExecutor.schedule(
+            componentMainThreadExecutor.getMainScheduledExecutor().schedule(
                     this::checkIdleSlotTimeout,
                     idleSlotTimeout.toMilliseconds(),
                     TimeUnit.MILLISECONDS);
@@ -447,7 +447,7 @@ public class DeclarativeSlotPoolBridge extends DeclarativeSlotPoolService implem
         }
 
         if (componentMainThreadExecutor != null) {
-            componentMainThreadExecutor.schedule(
+            componentMainThreadExecutor.getMainScheduledExecutor().schedule(
                     this::checkBatchSlotTimeout,
                     batchSlotTimeout.toMilliseconds(),
                     TimeUnit.MILLISECONDS);
