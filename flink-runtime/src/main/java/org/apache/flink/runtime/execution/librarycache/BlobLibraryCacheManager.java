@@ -26,6 +26,7 @@ import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkUserCodeClassLoader;
 import org.apache.flink.util.FlinkUserCodeClassLoaders;
 import org.apache.flink.util.Preconditions;
+import org.apache.flink.util.SimpleUserCodeClassLoader;
 import org.apache.flink.util.UserCodeClassLoader;
 
 import org.slf4j.Logger;
@@ -220,6 +221,10 @@ public class BlobLibraryCacheManager implements LibraryCacheManager {
         private UserCodeClassLoader getOrResolveClassLoader(
                 Collection<PermanentBlobKey> libraries, Collection<URL> classPaths)
                 throws IOException {
+            if ((libraries == null || libraries.isEmpty())
+                    && (classPaths == null || classPaths.isEmpty())) {
+                return SimpleUserCodeClassLoader.create(ClassLoader.getSystemClassLoader());
+            }
             synchronized (lockObject) {
                 verifyIsNotReleased();
 

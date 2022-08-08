@@ -29,6 +29,7 @@ import org.apache.flink.table.data.utils.JoinedRowData
 import org.apache.flink.table.functions.UserDefinedFunction
 import org.apache.flink.table.planner.codegen.GenerateUtils.{generateInputFieldUnboxing, generateNonNullField}
 import org.apache.flink.table.planner.codegen.calls.BuiltInMethods.BINARY_STRING_DATA_FROM_STRING
+import org.apache.flink.table.planner.utils.CodeGenCounterManager
 import org.apache.flink.table.runtime.dataview.StateDataViewStore
 import org.apache.flink.table.runtime.generated.{AggsHandleFunction, GeneratedHashFunction, HashFunction, NamespaceAggsHandleFunction, TableAggsHandleFunction}
 import org.apache.flink.table.runtime.types.LogicalTypeDataTypeConverter.fromDataTypeToLogicalType
@@ -120,15 +121,13 @@ object CodeGenUtils {
 
   // ----------------------------------------------------------------------------------------
 
-  private val nameCounter = new AtomicLong
-
   def newName(name: String): String = {
-    s"$name$$${nameCounter.getAndIncrement}"
+    s"$name$$${CodeGenCounterManager.getInstance().getAndIncrement}"
   }
 
   def newNames(names: String*): Seq[String] = {
     require(names.toSet.size == names.length, "Duplicated names")
-    val newId = nameCounter.getAndIncrement
+    val newId = CodeGenCounterManager.getInstance().getAndIncrement
     names.map(name => s"$name$$$newId")
   }
 

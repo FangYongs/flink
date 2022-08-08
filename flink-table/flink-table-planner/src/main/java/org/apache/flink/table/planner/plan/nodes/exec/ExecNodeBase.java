@@ -28,6 +28,7 @@ import org.apache.flink.table.planner.plan.nodes.exec.serde.ConfigurationJsonSer
 import org.apache.flink.table.planner.plan.nodes.exec.utils.TransformationMetadata;
 import org.apache.flink.table.planner.plan.nodes.exec.visitor.ExecNodeVisitor;
 import org.apache.flink.table.planner.plan.utils.ExecNodeMetadataUtil;
+import org.apache.flink.table.planner.utils.CodeGenCounterManager;
 import org.apache.flink.table.types.logical.LogicalType;
 
 import org.apache.flink.shaded.jackson2.com.fasterxml.jackson.annotation.JsonIgnore;
@@ -144,6 +145,7 @@ public abstract class ExecNodeBase<T> implements ExecNode<T> {
     @Override
     public final Transformation<T> translateToPlan(Planner planner) {
         if (transformation == null) {
+            CodeGenCounterManager.initialize();
             transformation =
                     translateToPlanInternal(
                             (PlannerBase) planner,

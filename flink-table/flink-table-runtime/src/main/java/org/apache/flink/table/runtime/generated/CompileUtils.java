@@ -54,7 +54,7 @@ public final class CompileUtils {
                     // estimated maximum planning/startup time
                     .expireAfterAccess(Duration.ofMinutes(5))
                     // estimated cache size
-                    .maximumSize(300)
+                    .maximumSize(1000)
                     .softValues()
                     .build();
 
@@ -63,7 +63,7 @@ public final class CompileUtils {
                     // estimated maximum planning/startup time
                     .expireAfterAccess(Duration.ofMinutes(5))
                     // estimated cache size
-                    .maximumSize(100)
+                    .maximumSize(1000)
                     .softValues()
                     .build();
 
