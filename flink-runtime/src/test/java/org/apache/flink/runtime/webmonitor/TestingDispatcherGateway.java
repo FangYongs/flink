@@ -37,6 +37,8 @@ import org.apache.flink.runtime.messages.webmonitor.ClusterOverview;
 import org.apache.flink.runtime.messages.webmonitor.MultipleJobsDetails;
 import org.apache.flink.runtime.operators.coordination.CoordinationRequest;
 import org.apache.flink.runtime.operators.coordination.CoordinationResponse;
+import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
+import org.apache.flink.runtime.resourcemanager.TaskExecutorRegistration;
 import org.apache.flink.runtime.rest.handler.async.OperationResult;
 import org.apache.flink.runtime.rest.handler.job.AsynchronousJobOperationKey;
 import org.apache.flink.runtime.rest.messages.ThreadDumpInfo;
@@ -245,6 +247,18 @@ public final class TestingDispatcherGateway extends TestingRestfulGateway
             Time timeout) {
         return stopWithSavepointAndGetLocationFunction.apply(jobId, targetDirectory, formatType);
     }
+
+    @Override
+    public void disconnectResourceManager(ResourceManagerId fencingToken, Exception cause) {}
+
+    @Override
+    public CompletableFuture<Void> heartbeatFromResourceManager(ResourceID resourceID) {
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Override
+    public void offerTaskManagerFromResourceManager(
+            Collection<TaskExecutorRegistration> taskExecutorRegistrations, Time timeout) {}
 
     public static Builder newBuilder() {
         return new Builder();

@@ -29,6 +29,8 @@ import org.apache.flink.runtime.clusterframework.ApplicationStatus;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
+import org.apache.flink.runtime.dispatcher.Dispatcher;
+import org.apache.flink.runtime.dispatcher.DispatcherId;
 import org.apache.flink.runtime.instance.InstanceID;
 import org.apache.flink.runtime.io.network.partition.ClusterPartitionManager;
 import org.apache.flink.runtime.jobmaster.JobMaster;
@@ -57,6 +59,21 @@ import java.util.concurrent.CompletableFuture;
 /** The {@link ResourceManager}'s RPC gateway interface. */
 public interface ResourceManagerGateway
         extends FencedRpcGateway<ResourceManagerId>, ClusterPartitionManager, BlocklistListener {
+
+    /**
+     * Register a {@link Dispatcher} at the resource manager.
+     *
+     * @param dispatcherId The fencing token for the Dispatcher leader
+     * @param dispatcherResourceId The resource ID of the Dispatcher that registers
+     * @param dispatcherAddress The address of the Dispatcher that registers
+     * @param timeout Timeout for the future to complete
+     * @return Future registration response
+     */
+    CompletableFuture<RegistrationResponse> registerDispatcher(
+            DispatcherId dispatcherId,
+            ResourceID dispatcherResourceId,
+            String dispatcherAddress,
+            @RpcTimeout Time timeout);
 
     /**
      * Register a {@link JobMaster} at the resource manager.
@@ -157,6 +174,14 @@ public interface ResourceManagerGateway
     CompletableFuture<Void> heartbeatFromJobManager(final ResourceID heartbeatOrigin);
 
     /**
+     * Sends the heartbeat to resource manager from dispatcher.
+     *
+     * @param heartbeatOrigin unique id of the job manager
+     * @return future which is completed exceptionally if the operation fails
+     */
+    CompletableFuture<Void> heartbeatFromDispatcher(final ResourceID heartbeatOrigin);
+
+    /**
      * Disconnects a TaskManager specified by the given resourceID from the {@link ResourceManager}.
      *
      * @param resourceID identifying the TaskManager to disconnect
@@ -172,6 +197,14 @@ public interface ResourceManagerGateway
      * @param cause for the disconnection of the JobManager
      */
     void disconnectJobManager(JobID jobId, JobStatus jobStatus, Exception cause);
+
+    /**
+     * Disconnects a Dispatcher specified by the given resourceID from the {@link ResourceManager}.
+     *
+     * @param resourceID identifying the Dispatcher to disconnect
+     * @param cause for the disconnection of the TaskManager
+     */
+    void disconnectDispatcher(ResourceID resourceID, Exception cause);
 
     /**
      * Requests information about the registered {@link TaskExecutor}.

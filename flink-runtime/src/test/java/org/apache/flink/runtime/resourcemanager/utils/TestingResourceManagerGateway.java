@@ -30,6 +30,7 @@ import org.apache.flink.runtime.clusterframework.types.AllocationID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
+import org.apache.flink.runtime.dispatcher.DispatcherId;
 import org.apache.flink.runtime.entrypoint.ClusterInformation;
 import org.apache.flink.runtime.instance.InstanceID;
 import org.apache.flink.runtime.io.network.partition.DataSetMetaInfo;
@@ -250,6 +251,15 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
     }
 
     @Override
+    public CompletableFuture<RegistrationResponse> registerDispatcher(
+            DispatcherId dispatcherId,
+            ResourceID dispatcherResourceId,
+            String dispatcherAddress,
+            Time timeout) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public CompletableFuture<RegistrationResponse> registerJobMaster(
             JobMasterId jobMasterId,
             ResourceID jobMasterResourceId,
@@ -364,6 +374,11 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
     }
 
     @Override
+    public CompletableFuture<Void> heartbeatFromDispatcher(ResourceID heartbeatOrigin) {
+        return null;
+    }
+
+    @Override
     public void disconnectTaskManager(ResourceID resourceID, Exception cause) {
         final Consumer<Tuple2<ResourceID, Throwable>> currentConsumer =
                 disconnectTaskExecutorConsumer;
@@ -382,6 +397,9 @@ public class TestingResourceManagerGateway implements ResourceManagerGateway {
             currentConsumer.accept(Tuple3.of(jobId, jobStatus, cause));
         }
     }
+
+    @Override
+    public void disconnectDispatcher(ResourceID resourceID, Exception cause) {}
 
     @Override
     public CompletableFuture<Collection<TaskManagerInfo>> requestTaskManagerInfo(Time timeout) {

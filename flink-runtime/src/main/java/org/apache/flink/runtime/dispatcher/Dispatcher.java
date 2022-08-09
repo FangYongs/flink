@@ -43,7 +43,10 @@ import org.apache.flink.runtime.dispatcher.cleanup.ResourceCleaner;
 import org.apache.flink.runtime.dispatcher.cleanup.ResourceCleanerFactory;
 import org.apache.flink.runtime.entrypoint.ClusterEntryPointExceptionUtils;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
+import org.apache.flink.runtime.heartbeat.HeartbeatManager;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
+import org.apache.flink.runtime.heartbeat.HeartbeatTarget;
+import org.apache.flink.runtime.heartbeat.NoOpHeartbeatManager;
 import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.highavailability.JobResultEntry;
 import org.apache.flink.runtime.highavailability.JobResultStore;
@@ -57,7 +60,9 @@ import org.apache.flink.runtime.jobmaster.JobManagerRunnerResult;
 import org.apache.flink.runtime.jobmaster.JobManagerSharedServices;
 import org.apache.flink.runtime.jobmaster.JobMasterGateway;
 import org.apache.flink.runtime.jobmaster.JobResult;
+import org.apache.flink.runtime.jobmaster.ResourceManagerAddress;
 import org.apache.flink.runtime.jobmaster.factories.DefaultJobManagerJobMetricGroupFactory;
+import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalService;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.FlinkJobNotFoundException;
 import org.apache.flink.runtime.messages.FlinkJobTerminatedWithoutCancellationException;
@@ -69,8 +74,14 @@ import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
 import org.apache.flink.runtime.operators.coordination.CoordinationRequest;
 import org.apache.flink.runtime.operators.coordination.CoordinationResponse;
+import org.apache.flink.runtime.registration.RegisteredRpcConnection;
+import org.apache.flink.runtime.registration.RegistrationResponse;
+import org.apache.flink.runtime.registration.RetryingRegistration;
+import org.apache.flink.runtime.registration.RetryingRegistrationConfiguration;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerGateway;
+import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.resourcemanager.ResourceOverview;
+import org.apache.flink.runtime.resourcemanager.TaskExecutorRegistration;
 import org.apache.flink.runtime.rest.handler.async.OperationResult;
 import org.apache.flink.runtime.rest.handler.job.AsynchronousJobOperationKey;
 import org.apache.flink.runtime.rest.messages.ThreadDumpInfo;
@@ -78,6 +89,7 @@ import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.rpc.FencedRpcEndpoint;
 import org.apache.flink.runtime.rpc.RpcService;
 import org.apache.flink.runtime.rpc.RpcServiceUtils;
+import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.scheduler.ExecutionGraphInfo;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
 import org.apache.flink.util.ExceptionUtils;
@@ -87,6 +99,8 @@ import org.apache.flink.util.SerializedValue;
 import org.apache.flink.util.concurrent.FutureUtils;
 import org.apache.flink.util.function.FunctionUtils;
 import org.apache.flink.util.function.ThrowingConsumer;
+
+import org.slf4j.Logger;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -100,6 +114,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -121,6 +136,8 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId>
     public static final String DISPATCHER_NAME = "dispatcher";
 
     private static final int INITIAL_JOB_MANAGER_RUNNER_REGISTRY_CAPACITY = 16;
+
+    private final ResourceID resourceId;
 
     private final Configuration configuration;
 
@@ -166,6 +183,17 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId>
 
     private final ResourceCleaner localResourceCleaner;
     private final ResourceCleaner globalResourceCleaner;
+
+    // -------------- Connection with resource manager -------------- //
+    private final LeaderRetrievalService resourceManagerLeaderRetriever;
+
+    private HeartbeatManager<Void, Void> resourceManagerHeartbeatManager;
+
+    @Nullable private ResourceManagerAddress resourceManagerAddress;
+
+    @Nullable private DispatcherToResourceManagerConnection dispatcherToResourceManagerConnection;
+
+    @Nullable private EstablishedResourceManagerConnection establishedResourceManagerConnection;
 
     /** Enum to distinguish between initial job submission and re-submission for recovery. */
     protected enum ExecutionType {
@@ -225,6 +253,7 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId>
         super(rpcService, RpcServiceUtils.createRandomName(DISPATCHER_NAME), fencingToken);
         assertRecoveredJobsAndDirtyJobResults(recoveredJobs, recoveredDirtyJobs);
 
+        this.resourceId = ResourceID.generate();
         this.configuration = dispatcherServices.getConfiguration();
         this.highAvailabilityServices = dispatcherServices.getHighAvailabilityServices();
         this.resourceManagerGatewayRetriever =
@@ -278,6 +307,11 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId>
                 resourceCleanerFactory.createLocalResourceCleaner(this.getMainThreadExecutor());
         this.globalResourceCleaner =
                 resourceCleanerFactory.createGlobalResourceCleaner(this.getMainThreadExecutor());
+
+        this.resourceManagerLeaderRetriever =
+                highAvailabilityServices.getResourceManagerLeaderRetriever();
+
+        this.resourceManagerHeartbeatManager = NoOpHeartbeatManager.getInstance();
     }
 
     // ------------------------------------------------------
@@ -989,6 +1023,90 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId>
                                 operatorId, serializedRequest, timeout));
     }
 
+    @Override
+    public void disconnectResourceManager(ResourceManagerId resourceManagerId, Exception cause) {
+        if (isConnectingToResourceManager(resourceManagerId)) {
+            reconnectToResourceManager(cause);
+        }
+    }
+
+    @Override
+    public CompletableFuture<Void> heartbeatFromResourceManager(ResourceID resourceID) {
+        return resourceManagerHeartbeatManager.requestHeartbeat(resourceID, null);
+    }
+
+    @Override
+    public void offerTaskManagerFromResourceManager(
+            Collection<TaskExecutorRegistration> taskExecutorRegistrations,
+            @RpcTimeout Time timeout) {
+        log.info(
+                "Receive {} task managers from resource manager", taskExecutorRegistrations.size());
+    }
+
+    private void reconnectToResourceManager(Exception cause) {
+        closeResourceManagerConnection(cause);
+        tryConnectToResourceManager();
+    }
+
+    private void closeResourceManagerConnection(Exception cause) {
+        if (establishedResourceManagerConnection != null) {
+            final ResourceID resourceManagerResourceId =
+                    establishedResourceManagerConnection.getResourceManagerResourceID();
+
+            if (log.isDebugEnabled()) {
+                log.debug("Close ResourceManager connection {}.", resourceManagerResourceId, cause);
+            } else {
+                log.info("Close ResourceManager connection {}.", resourceManagerResourceId);
+            }
+
+            ResourceManagerGateway resourceManagerGateway =
+                    establishedResourceManagerConnection.getResourceManagerGateway();
+            resourceManagerGateway.disconnectDispatcher(resourceId, cause);
+
+            final ResourceID resourceManagerResourceID =
+                    establishedResourceManagerConnection.getResourceManagerResourceID();
+            resourceManagerHeartbeatManager.unmonitorTarget(resourceManagerResourceID);
+
+            establishedResourceManagerConnection = null;
+        }
+
+        if (dispatcherToResourceManagerConnection != null) {
+            // stop a potentially ongoing registration process
+            dispatcherToResourceManagerConnection.close();
+            dispatcherToResourceManagerConnection = null;
+        }
+    }
+
+    private void tryConnectToResourceManager() {
+        if (resourceManagerAddress != null) {
+            connectToResourceManager();
+        }
+    }
+
+    private void connectToResourceManager() {
+        Preconditions.checkNotNull(resourceManagerAddress);
+        Preconditions.checkArgument(dispatcherToResourceManagerConnection == null);
+        Preconditions.checkArgument(establishedResourceManagerConnection == null);
+
+        log.info("Connecting to ResourceManager {}", resourceManagerAddress);
+
+        dispatcherToResourceManagerConnection =
+                new DispatcherToResourceManagerConnection(
+                        log,
+                        getAddress(),
+                        getFencingToken(),
+                        resourceManagerAddress.getAddress(),
+                        resourceManagerAddress.getResourceManagerId(),
+                        getMainThreadExecutor());
+
+        dispatcherToResourceManagerConnection.start();
+    }
+
+    private boolean isConnectingToResourceManager(ResourceManagerId resourceManagerId) {
+        return resourceManagerAddress != null
+                && resourceManagerAddress.getResourceManagerId().equals(resourceManagerId);
+    }
+
     private void registerJobManagerRunnerTerminationFuture(
             JobID jobId, CompletableFuture<Void> jobManagerRunnerTerminationFuture) {
         Preconditions.checkState(!jobManagerRunnerTerminationFutures.containsKey(jobId));
@@ -1308,5 +1426,129 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId>
 
     public CompletableFuture<Void> onRemovedJobGraph(JobID jobId) {
         return CompletableFuture.runAsync(() -> terminateJob(jobId), getMainThreadExecutor());
+    }
+
+    private void establishResourceManagerConnection(final DispatcherRegistrationSuccess success) {
+        final ResourceManagerId resourceManagerId = success.getResourceManagerId();
+
+        // verify the response with current connection
+        if (dispatcherToResourceManagerConnection != null
+                && Objects.equals(
+                        dispatcherToResourceManagerConnection.getTargetLeaderId(),
+                        resourceManagerId)) {
+
+            log.info(
+                    "Dispatcher successfully registered at ResourceManager, leader id: {}.",
+                    resourceManagerId);
+
+            final ResourceManagerGateway resourceManagerGateway =
+                    dispatcherToResourceManagerConnection.getTargetGateway();
+
+            final ResourceID resourceManagerResourceId = success.getResourceManagerResourceId();
+
+            establishedResourceManagerConnection =
+                    new EstablishedResourceManagerConnection(
+                            resourceManagerGateway, resourceManagerResourceId);
+
+            resourceManagerHeartbeatManager.monitorTarget(
+                    resourceManagerResourceId,
+                    new HeartbeatTarget<Void>() {
+                        @Override
+                        public CompletableFuture<Void> receiveHeartbeat(
+                                ResourceID resourceID, Void payload) {
+                            return resourceManagerGateway.heartbeatFromDispatcher(resourceID);
+                        }
+
+                        @Override
+                        public CompletableFuture<Void> requestHeartbeat(
+                                ResourceID resourceID, Void payload) {
+                            // request heartbeat will never be called on the dispatcher side
+                            return CompletableFuture.completedFuture(null);
+                        }
+                    });
+        } else {
+            log.debug(
+                    "Ignoring resource manager connection to {} because it's duplicated or outdated.",
+                    resourceManagerId);
+        }
+    }
+
+    // ----------------------------------------------------------------------------------------------
+    private class DispatcherToResourceManagerConnection
+            extends RegisteredRpcConnection<
+                    ResourceManagerId,
+                    ResourceManagerGateway,
+                    DispatcherRegistrationSuccess,
+                    DispatcherRegistrationRejection> {
+
+        private final String dispatcherRpcAddress;
+
+        private final DispatcherId dispatcherId;
+
+        public DispatcherToResourceManagerConnection(
+                final Logger log,
+                final String dispatcherRpcAddress,
+                final DispatcherId dispatcherId,
+                final String resourceManagerAddress,
+                final ResourceManagerId resourceManagerId,
+                final Executor executor) {
+
+            super(log, resourceManagerAddress, resourceManagerId, executor);
+            this.dispatcherRpcAddress = dispatcherRpcAddress;
+            this.dispatcherId = dispatcherId;
+        }
+
+        @Override
+        protected RetryingRegistration<
+                        ResourceManagerId,
+                        ResourceManagerGateway,
+                        DispatcherRegistrationSuccess,
+                        DispatcherRegistrationRejection>
+                generateRegistration() {
+            return new RetryingRegistration<
+                    ResourceManagerId,
+                    ResourceManagerGateway,
+                    DispatcherRegistrationSuccess,
+                    DispatcherRegistrationRejection>(
+                    log,
+                    getRpcService(),
+                    "ResourceManager",
+                    ResourceManagerGateway.class,
+                    getTargetAddress(),
+                    getTargetLeaderId(),
+                    RetryingRegistrationConfiguration.fromConfiguration(configuration)) {
+
+                @Override
+                protected CompletableFuture<RegistrationResponse> invokeRegistration(
+                        ResourceManagerGateway gateway,
+                        ResourceManagerId fencingToken,
+                        long timeoutMillis) {
+                    Time timeout = Time.milliseconds(timeoutMillis);
+
+                    return gateway.registerDispatcher(
+                            dispatcherId, resourceId, dispatcherRpcAddress, timeout);
+                }
+            };
+        }
+
+        @Override
+        protected void onRegistrationSuccess(final DispatcherRegistrationSuccess success) {
+            runAsync(
+                    () -> {
+                        // filter out outdated connections
+                        //noinspection ObjectEquality
+                        if (this == dispatcherToResourceManagerConnection) {
+                            establishResourceManagerConnection(success);
+                        }
+                    });
+        }
+
+        @Override
+        protected void onRegistrationRejection(DispatcherRegistrationRejection rejection) {}
+
+        @Override
+        protected void onRegistrationFailure(final Throwable failure) {
+            onFatalError(failure);
+        }
     }
 }
