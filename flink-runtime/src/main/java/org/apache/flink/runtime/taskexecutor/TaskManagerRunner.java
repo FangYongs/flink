@@ -631,6 +631,7 @@ public class TaskManagerRunner implements FatalErrorHandler {
         MetricUtils.instantiateFlinkMemoryMetricGroup(
                 taskManagerMetricGroup.f1,
                 taskManagerServices.getTaskSlotTable(),
+                taskManagerServices.getTaskShareSlotTable(),
                 taskManagerServices::getManagedMemorySize);
 
         TaskManagerConfiguration taskManagerConfiguration =

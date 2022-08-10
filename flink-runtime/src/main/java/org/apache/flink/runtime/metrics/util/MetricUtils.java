@@ -138,29 +138,37 @@ public class MetricUtils {
     public static void instantiateFlinkMemoryMetricGroup(
             MetricGroup parentMetricGroup,
             TaskSlotTable<?> taskSlotTable,
+            TaskSlotTable<?> taskShareSlotTable,
             Supplier<Long> managedMemoryTotalSupplier) {
         checkNotNull(parentMetricGroup);
         checkNotNull(taskSlotTable);
+        checkNotNull(taskShareSlotTable);
         checkNotNull(managedMemoryTotalSupplier);
 
         MetricGroup flinkMemoryMetricGroup =
                 parentMetricGroup.addGroup(METRIC_GROUP_FLINK).addGroup(METRIC_GROUP_MEMORY);
 
         instantiateManagedMemoryMetrics(
-                flinkMemoryMetricGroup, taskSlotTable, managedMemoryTotalSupplier);
+                flinkMemoryMetricGroup,
+                taskSlotTable,
+                taskShareSlotTable,
+                managedMemoryTotalSupplier);
     }
 
     private static void instantiateManagedMemoryMetrics(
             MetricGroup metricGroup,
             TaskSlotTable<?> taskSlotTable,
+            TaskSlotTable<?> taskShareSlotTable,
             Supplier<Long> managedMemoryTotalSupplier) {
         MetricGroup managedMemoryMetricGroup = metricGroup.addGroup(METRIC_GROUP_MANAGED_MEMORY);
 
-        managedMemoryMetricGroup.gauge("Used", () -> getUsedManagedMemory(taskSlotTable));
+        managedMemoryMetricGroup.gauge(
+                "Used", () -> getUsedManagedMemory(taskSlotTable, taskShareSlotTable));
         managedMemoryMetricGroup.gauge("Total", managedMemoryTotalSupplier::get);
     }
 
-    private static long getUsedManagedMemory(TaskSlotTable<?> taskSlotTable) {
+    private static long getUsedManagedMemory(
+            TaskSlotTable<?> taskSlotTable, TaskSlotTable<?> taskShareSlotTable) {
         Set<AllocationID> activeTaskAllocationIds = taskSlotTable.getActiveTaskSlotAllocationIds();
 
         long usedMemory = 0L;
@@ -176,6 +184,13 @@ public class MetricUtils {
                         "The task slot {} is not present anymore and will be ignored in calculating the amount of used memory.",
                         allocationID);
             }
+        }
+
+        try {
+            MemoryManager memoryPoolManager = taskShareSlotTable.getTaskMemoryManager(null);
+            usedMemory += memoryPoolManager.getMemorySize() - memoryPoolManager.availableMemory();
+        } catch (SlotNotFoundException e) {
+            LOG.debug("Can't get used memory from memory pool manager.");
         }
 
         return usedMemory;

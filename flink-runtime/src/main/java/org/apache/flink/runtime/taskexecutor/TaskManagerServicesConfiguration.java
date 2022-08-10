@@ -88,11 +88,19 @@ public class TaskManagerServicesConfiguration {
 
     private final TaskExecutorResourceSpec taskExecutorResourceSpec;
 
+    private final TaskExecutorResourceSpec taskExecutorOlapResourceSpec;
+
     private final FlinkUserCodeClassLoaders.ResolveOrder classLoaderResolveOrder;
 
     private final String[] alwaysParentFirstLoaderPatterns;
 
     private final int numIoThreads;
+
+    private final long requestMemoryPoolSegmentTimeoutMills;
+
+    private final boolean allocateMemoryPoolLazyEnable;
+
+    private final int memoryPoolBatchSize;
 
     private TaskManagerServicesConfiguration(
             Configuration configuration,
@@ -108,13 +116,17 @@ public class TaskManagerServicesConfiguration {
             int numberOfSlots,
             int pageSize,
             TaskExecutorResourceSpec taskExecutorResourceSpec,
+            float olapManagedMemoryFraction,
             long timerServiceShutdownTimeout,
             RetryingRegistrationConfiguration retryingRegistrationConfiguration,
             Optional<Time> systemResourceMetricsProbingInterval,
             FlinkUserCodeClassLoaders.ResolveOrder classLoaderResolveOrder,
             String[] alwaysParentFirstLoaderPatterns,
             int numIoThreads,
-            String nodeId) {
+            String nodeId,
+            long requestMemoryPoolSegmentTimeoutMills,
+            boolean allocateMemoryPoolLazyEnable,
+            int memoryPoolBatchSize) {
         this.configuration = checkNotNull(configuration);
         this.resourceID = checkNotNull(resourceID);
 
@@ -130,10 +142,16 @@ public class TaskManagerServicesConfiguration {
 
         this.pageSize = pageSize;
 
+        this.taskExecutorOlapResourceSpec =
+                taskExecutorResourceSpec.splitByMemory(olapManagedMemoryFraction);
         this.taskExecutorResourceSpec = taskExecutorResourceSpec;
         this.classLoaderResolveOrder = classLoaderResolveOrder;
         this.alwaysParentFirstLoaderPatterns = alwaysParentFirstLoaderPatterns;
         this.numIoThreads = numIoThreads;
+
+        this.requestMemoryPoolSegmentTimeoutMills = requestMemoryPoolSegmentTimeoutMills;
+        this.allocateMemoryPoolLazyEnable = allocateMemoryPoolLazyEnable;
+        this.memoryPoolBatchSize = memoryPoolBatchSize;
 
         checkArgument(
                 timerServiceShutdownTimeout >= 0L,
@@ -204,6 +222,10 @@ public class TaskManagerServicesConfiguration {
         return taskExecutorResourceSpec;
     }
 
+    public TaskExecutorResourceSpec getTaskExecutorOlapResourceSpec() {
+        return taskExecutorOlapResourceSpec;
+    }
+
     public MemorySize getNetworkMemorySize() {
         return taskExecutorResourceSpec.getNetworkMemSize();
     }
@@ -238,6 +260,18 @@ public class TaskManagerServicesConfiguration {
 
     public String getNodeId() {
         return nodeId;
+    }
+
+    public long getRequestMemoryPoolSegmentsTimeoutMills() {
+        return requestMemoryPoolSegmentTimeoutMills;
+    }
+
+    public boolean isAllocateMemoryPoolLazyEnable() {
+        return allocateMemoryPoolLazyEnable;
+    }
+
+    public int getMemoryPoolBatchSize() {
+        return memoryPoolBatchSize;
     }
 
     // --------------------------------------------------------------------------------------------
@@ -319,6 +353,15 @@ public class TaskManagerServicesConfiguration {
                         .getOptional(TaskManagerOptionsInternal.TASK_MANAGER_NODE_ID)
                         .orElse(externalAddress);
 
+        final float olapMemoryFraction =
+                configuration.getFloat(TaskManagerOptions.OLAP_MANAGED_MEMORY_FRACTION);
+        final long requestMemoryPoolSegmentTimeoutMills =
+                configuration.getLong(TaskManagerOptions.MEMORY_REQUEST_POOL_SEGMENT_TIMEOUT_MILLS);
+        final boolean allocateMemoryPoolLazyEnable =
+                configuration.getBoolean(TaskManagerOptions.MEMORY_ALLOCATE_POOL_LAZY_ENABLE);
+        final int memoryPoolBatchSize =
+                configuration.getInteger(TaskManagerOptions.MEMORY_POOP_BATCH_SIZE);
+
         return new TaskManagerServicesConfiguration(
                 configuration,
                 resourceID,
@@ -333,12 +376,16 @@ public class TaskManagerServicesConfiguration {
                 ConfigurationParserUtils.getSlot(configuration),
                 ConfigurationParserUtils.getPageSize(configuration),
                 taskExecutorResourceSpec,
+                olapMemoryFraction,
                 timerServiceShutdownTimeout,
                 retryingRegistrationConfiguration,
                 ConfigurationUtils.getSystemResourceMetricsProbingInterval(configuration),
                 FlinkUserCodeClassLoaders.ResolveOrder.fromString(classLoaderResolveOrder),
                 alwaysParentFirstLoaderPatterns,
                 numIoThreads,
-                nodeId);
+                nodeId,
+                requestMemoryPoolSegmentTimeoutMills,
+                allocateMemoryPoolLazyEnable,
+                memoryPoolBatchSize);
     }
 }

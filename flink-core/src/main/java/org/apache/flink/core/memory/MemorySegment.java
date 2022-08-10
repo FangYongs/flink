@@ -38,6 +38,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import static org.apache.flink.core.memory.MemoryUtils.getByteBufferAddress;
+import static org.apache.flink.util.Preconditions.checkArgument;
+import static org.apache.flink.util.Preconditions.checkNotNull;
 
 /**
  * This class represents a piece of memory managed by Flink.
@@ -125,7 +127,7 @@ public final class MemorySegment {
     private final int size;
 
     /** Optional owner of the memory segment. */
-    @Nullable private final Object owner;
+    @Nullable private Object owner;
 
     @Nullable private Runnable cleaner;
 
@@ -1653,5 +1655,31 @@ public final class MemorySegment {
      */
     public void processAsByteBuffer(Consumer<ByteBuffer> processConsumer) {
         Preconditions.checkNotNull(processConsumer).accept(wrapInternal(0, size));
+    }
+
+    /**
+     * Assign this segment to given owner.
+     *
+     * @param owner the given owner
+     */
+    public void assignOwner(Object owner) {
+        checkNotNull(owner);
+        checkArgument(
+                this.owner == null,
+                "The segment is used by " + this.owner + " now, can't be assigned to " + owner);
+        this.owner = owner;
+    }
+
+    /** Set the owner of the segment to null, it means nobody is using the segment. */
+    public void freeOwner() {
+        checkNotNull(owner);
+        owner = null;
+    }
+
+    /** Clear the data in the segment. */
+    public void clear() {
+        if (offHeapBuffer != null) {
+            offHeapBuffer.clear();
+        }
     }
 }

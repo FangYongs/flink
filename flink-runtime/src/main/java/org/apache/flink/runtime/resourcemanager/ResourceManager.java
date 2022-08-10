@@ -1251,6 +1251,7 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
         taskManagerHeartbeatManager.unmonitorTarget(resourceID);
 
         WorkerRegistration<WorkerType> workerRegistration = taskExecutors.remove(resourceID);
+        TaskExecutorRegistration taskExecutorRegistration = taskExecutorRegistrations.remove(resourceID);
 
         if (workerRegistration != null) {
             log.info(
@@ -1265,6 +1266,10 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
             clusterPartitionTracker.processTaskExecutorShutdown(resourceID);
 
             workerRegistration.getTaskExecutorGateway().disconnectResourceManager(cause);
+
+            if (taskExecutorRegistration != null) {
+                offerTaskManagerToDispatcher();
+            }
         } else {
             log.debug(
                     "No open TaskExecutor connection {}. Ignoring close TaskExecutor connection. Closing reason was: {}",

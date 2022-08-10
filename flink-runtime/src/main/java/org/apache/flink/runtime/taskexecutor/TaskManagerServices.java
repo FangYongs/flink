@@ -23,6 +23,7 @@ import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.runtime.blob.PermanentBlobService;
 import org.apache.flink.runtime.broadcast.BroadcastVariableManager;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
+import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.entrypoint.WorkingDirectory;
 import org.apache.flink.runtime.execution.librarycache.BlobLibraryCacheManager;
 import org.apache.flink.runtime.execution.librarycache.LibraryCacheManager;
@@ -30,6 +31,7 @@ import org.apache.flink.runtime.io.disk.iomanager.IOManager;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.io.network.TaskEventDispatcher;
 import org.apache.flink.runtime.memory.MemoryManager;
+import org.apache.flink.runtime.memory.MemoryPoolManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
 import org.apache.flink.runtime.shuffle.ShuffleEnvironment;
 import org.apache.flink.runtime.shuffle.ShuffleEnvironmentContext;
@@ -40,6 +42,7 @@ import org.apache.flink.runtime.taskexecutor.slot.DefaultTimerService;
 import org.apache.flink.runtime.taskexecutor.slot.FileSlotAllocationSnapshotPersistenceService;
 import org.apache.flink.runtime.taskexecutor.slot.NoOpSlotAllocationSnapshotPersistenceService;
 import org.apache.flink.runtime.taskexecutor.slot.SlotAllocationSnapshotPersistenceService;
+import org.apache.flink.runtime.taskexecutor.slot.TaskShareSlotTable;
 import org.apache.flink.runtime.taskexecutor.slot.TaskSlotTable;
 import org.apache.flink.runtime.taskexecutor.slot.TaskSlotTableImpl;
 import org.apache.flink.runtime.taskexecutor.slot.TimerService;
@@ -54,6 +57,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -75,6 +79,7 @@ public class TaskManagerServices {
     private final KvStateService kvStateService;
     private final BroadcastVariableManager broadcastVariableManager;
     private final TaskSlotTable<Task> taskSlotTable;
+    private final TaskSlotTable<Task> taskShareSlotTable;
     private final JobTable jobTable;
     private final JobLeaderService jobLeaderService;
     private final TaskExecutorLocalStateStoresManager taskManagerStateStore;
@@ -92,6 +97,7 @@ public class TaskManagerServices {
             KvStateService kvStateService,
             BroadcastVariableManager broadcastVariableManager,
             TaskSlotTable<Task> taskSlotTable,
+            TaskSlotTable<Task> taskShareSlotTable,
             JobTable jobTable,
             JobLeaderService jobLeaderService,
             TaskExecutorLocalStateStoresManager taskManagerStateStore,
@@ -109,6 +115,7 @@ public class TaskManagerServices {
         this.kvStateService = Preconditions.checkNotNull(kvStateService);
         this.broadcastVariableManager = Preconditions.checkNotNull(broadcastVariableManager);
         this.taskSlotTable = Preconditions.checkNotNull(taskSlotTable);
+        this.taskShareSlotTable = Preconditions.checkNotNull(taskShareSlotTable);
         this.jobTable = Preconditions.checkNotNull(jobTable);
         this.jobLeaderService = Preconditions.checkNotNull(jobLeaderService);
         this.taskManagerStateStore = Preconditions.checkNotNull(taskManagerStateStore);
@@ -149,6 +156,10 @@ public class TaskManagerServices {
 
     public TaskSlotTable<Task> getTaskSlotTable() {
         return taskSlotTable;
+    }
+
+    public TaskSlotTable<Task> getTaskShareSlotTable() {
+        return taskShareSlotTable;
     }
 
     public JobTable getJobTable() {
@@ -316,6 +327,14 @@ public class TaskManagerServices {
                         taskManagerServicesConfiguration.getTimerServiceShutdownTimeout(),
                         taskManagerServicesConfiguration.getPageSize(),
                         ioExecutor);
+        final TaskSlotTable<Task> taskShareSlotTable =
+                createTaskShareSlotTable(
+                        taskManagerServicesConfiguration.getTaskExecutorOlapResourceSpec(),
+                        taskManagerServicesConfiguration.getPageSize(),
+                        taskManagerServicesConfiguration.getRequestMemoryPoolSegmentsTimeoutMills(),
+                        taskManagerServicesConfiguration.isAllocateMemoryPoolLazyEnable(),
+                        taskManagerServicesConfiguration.getNumberOfSlots(),
+                        taskManagerServicesConfiguration.getMemoryPoolBatchSize());
 
         final JobTable jobTable = DefaultJobTable.create();
 
@@ -370,6 +389,7 @@ public class TaskManagerServices {
                 kvStateService,
                 broadcastVariableManager,
                 taskSlotTable,
+                taskShareSlotTable,
                 jobTable,
                 jobLeaderService,
                 taskStateManager,
@@ -398,6 +418,27 @@ public class TaskManagerServices {
                 pageSize,
                 timerService,
                 memoryVerificationExecutor);
+    }
+
+    private static TaskSlotTable<Task> createTaskShareSlotTable(
+            final TaskExecutorResourceSpec taskExecutorOlapResourceSpec,
+            final int pageSize,
+            final long requestMemorySegmentsTimeoutMills,
+            final boolean lazyAllocate,
+            final int numberOfSlots,
+            final int batchSize) {
+        ResourceProfile resourceProfile =
+                TaskExecutorResourceUtils.generateTotalAvailableResourceProfile(
+                        taskExecutorOlapResourceSpec);
+        MemoryPoolManager memoryPoolManager =
+                new MemoryPoolManager(
+                        resourceProfile.getManagedMemory().getBytes(),
+                        pageSize,
+                        Duration.ofMillis(requestMemorySegmentsTimeoutMills),
+                        lazyAllocate,
+                        numberOfSlots,
+                        batchSize);
+        return new TaskShareSlotTable<>(memoryPoolManager);
     }
 
     private static ShuffleEnvironment<?, ?> createShuffleEnvironment(

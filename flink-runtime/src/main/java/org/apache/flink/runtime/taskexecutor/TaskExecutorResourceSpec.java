@@ -42,7 +42,7 @@ public class TaskExecutorResourceSpec {
 
     private final MemorySize networkMemSize;
 
-    private final MemorySize managedMemorySize;
+    private MemorySize managedMemorySize;
 
     private final Map<String, ExternalResource> extendedResources;
 
@@ -89,5 +89,17 @@ public class TaskExecutorResourceSpec {
 
     public Map<String, ExternalResource> getExtendedResources() {
         return Collections.unmodifiableMap(extendedResources);
+    }
+
+    public TaskExecutorResourceSpec splitByMemory(float managedMemoryFraction) {
+        MemorySize splitMemorySize = managedMemorySize.multiply(managedMemoryFraction);
+        managedMemorySize = managedMemorySize.subtract(splitMemorySize);
+        return new TaskExecutorResourceSpec(
+                cpuCores,
+                taskHeapSize,
+                taskOffHeapSize,
+                networkMemSize,
+                managedMemorySize.multiply(managedMemoryFraction),
+                extendedResources.values());
     }
 }

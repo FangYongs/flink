@@ -458,6 +458,15 @@ public class TaskManagerOptions {
                             "Fraction of Total Flink Memory to be used as Managed Memory, if Managed Memory size is not"
                                     + " explicitly specified.");
 
+    /** Timeout for allocate memory segments from MemoryPoolManager. */
+    @Documentation.Section(Documentation.Sections.COMMON_MEMORY)
+    public static final ConfigOption<Duration> ALLOCATE_MEMORY_SEGMENTS_TIMEOUT =
+            ConfigOptions.key("taskmanager.allocate-memory-segments.timeout")
+                    .durationType()
+                    .defaultValue(TimeUtils.parseDuration("10 s"))
+                    .withDescription(
+                            "Timeout for allocate memory segments from MemoryPoolManager.");
+
     /** Weights of managed memory consumers. */
     @Documentation.Section(Documentation.Sections.COMMON_MEMORY)
     public static final ConfigOption<Map<String, String>> MANAGED_MEMORY_CONSUMER_WEIGHTS =
@@ -651,6 +660,41 @@ public class TaskManagerOptions {
                                     + " Process Memory. If the derived size is less/greater than the configured min/max size, the min/max"
                                     + " size will be used. The exact size of JVM Overhead can be explicitly specified by setting the min/max"
                                     + " size to the same value.");
+
+    /** Fraction of Total Managed Memory to be used for olap queries. */
+    @Documentation.Section(Documentation.Sections.COMMON_MEMORY)
+    public static final ConfigOption<Float> OLAP_MANAGED_MEMORY_FRACTION =
+            key("taskmanager.memory-managed-olap.fraction")
+                    .floatType()
+                    .defaultValue(0.5f)
+                    .withDescription(
+                            "Fraction of Total Managed Memory to be used for olap queries.");
+
+    /** Timeout for operator request segment from MemoryPoolManager. */
+    @Documentation.Section(Documentation.Sections.COMMON_MEMORY)
+    public static final ConfigOption<Long> MEMORY_REQUEST_POOL_SEGMENT_TIMEOUT_MILLS =
+            key("taskmanager.memory-request-pool-segment-timeout.mills")
+                    .longType()
+                    .defaultValue(10000L)
+                    .withDescription("Timeout for operator request segment from MemoryPoolManager");
+
+    /** Whether the MemoryPoolManager allocates memory segment lazy. */
+    @Documentation.Section(Documentation.Sections.COMMON_MEMORY)
+    public static final ConfigOption<Boolean> MEMORY_ALLOCATE_POOL_LAZY_ENABLE =
+            key("taskmanager.memory-pool-allocate-lazy.enable")
+                    .booleanType()
+                    .defaultValue(true)
+                    .withDescription(
+                            "If ture, the MemoryPoolManager will allocate memory segment lazy.");
+
+    /** Batch size of memory segment in MemoryPoolManager. */
+    @Documentation.Section(Documentation.Sections.COMMON_MEMORY)
+    public static final ConfigOption<Integer> MEMORY_POOP_BATCH_SIZE =
+            key("taskmanager.memory-pool-batch.size")
+                    .intType()
+                    .defaultValue(32)
+                    .withDescription(
+                            "MemoryPoolManager manages the batch segments in it, and the default batch size is 32.");
 
     // ------------------------------------------------------------------------
     //  Task Options

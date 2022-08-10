@@ -240,6 +240,12 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
 
     private final SlotAllocationSnapshotPersistenceService slotAllocationSnapshotPersistenceService;
 
+    // --------- task manager for olap job -----------
+
+    private final TaskSlotTable<Task> taskShareSlotTable;
+
+    private final Map<JobID, JobDeploymentManager> jobDeploymentManagers;
+
     // ------------------------------------------------------------------------
 
     private final HardwareDescription hardwareDescription;
@@ -314,6 +320,9 @@ public class TaskExecutor extends RpcEndpoint implements TaskExecutorGateway {
         this.kvStateService = taskExecutorServices.getKvStateService();
         this.ioExecutor = taskExecutorServices.getIOExecutor();
         this.resourceManagerLeaderRetriever = haServices.getResourceManagerLeaderRetriever();
+
+        this.taskShareSlotTable = taskExecutorServices.getTaskShareSlotTable();
+        this.jobDeploymentManagers = new HashMap<>(100);
 
         this.hardwareDescription =
                 HardwareDescription.extractFromSystem(taskExecutorServices.getManagedMemorySize());

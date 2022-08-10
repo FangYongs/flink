@@ -53,6 +53,7 @@ public class TaskManagerServicesBuilder {
     private KvStateService kvStateService;
     private BroadcastVariableManager broadcastVariableManager;
     private TaskSlotTable<Task> taskSlotTable;
+    private TaskSlotTable<Task> taskShareSlotTable;
     private JobTable jobTable;
     private JobLeaderService jobLeaderService;
     private TaskExecutorLocalStateStoresManager taskStateManager;
@@ -70,6 +71,10 @@ public class TaskManagerServicesBuilder {
         broadcastVariableManager = new BroadcastVariableManager();
         taskEventDispatcher = new TaskEventDispatcher();
         taskSlotTable =
+                TestingTaskSlotTable.<Task>newBuilder()
+                        .closeAsyncReturns(CompletableFuture.completedFuture(null))
+                        .build();
+        taskShareSlotTable =
                 TestingTaskSlotTable.<Task>newBuilder()
                         .closeAsyncReturns(CompletableFuture.completedFuture(null))
                         .build();
@@ -167,6 +172,7 @@ public class TaskManagerServicesBuilder {
                 kvStateService,
                 broadcastVariableManager,
                 taskSlotTable,
+                taskShareSlotTable,
                 jobTable,
                 jobLeaderService,
                 taskStateManager,

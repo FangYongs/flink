@@ -218,6 +218,7 @@ public class MetricUtilsTest extends TestLogger {
             MetricUtils.instantiateFlinkMemoryMetricGroup(
                     metricGroup,
                     taskManagerServices.getTaskSlotTable(),
+                    taskManagerServices.getTaskShareSlotTable(),
                     taskManagerServices::getManagedMemorySize);
 
             Gauge<Number> usedMetric = (Gauge<Number>) metricGroup.get("Used");
