@@ -18,6 +18,9 @@
 
 package org.apache.flink.runtime.jobmaster.slotpool;
 
+import org.apache.flink.runtime.dispatcher.ResolvedTaskManager;
+import org.apache.flink.runtime.jobmaster.JobMasterId;
+import org.apache.flink.runtime.jobmaster.SlotContext;
 import org.apache.flink.runtime.jobmaster.SlotRequestId;
 
 import java.util.concurrent.CompletableFuture;
@@ -36,6 +39,18 @@ public interface PhysicalSlotProvider {
      */
     CompletableFuture<PhysicalSlotRequest.Result> allocatePhysicalSlot(
             PhysicalSlotRequest physicalSlotRequest);
+
+    /**
+     * Allocate physical slot from given resolved task manager.
+     *
+     * @param resolvedTaskManager the resolved task manager
+     * @param jobMasterId the master id of job
+     * @return the allocated physical slot
+     */
+    default SlotContext allocatePhysicalSlot(
+            ResolvedTaskManager resolvedTaskManager, JobMasterId jobMasterId) {
+        throw new UnsupportedOperationException();
+    }
 
     /**
      * Cancels the slot request with the given {@link SlotRequestId}.

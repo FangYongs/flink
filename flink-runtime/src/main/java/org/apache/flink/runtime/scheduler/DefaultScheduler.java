@@ -25,8 +25,10 @@ import org.apache.flink.configuration.Configuration;
 import org.apache.flink.runtime.checkpoint.CheckpointRecoveryFactory;
 import org.apache.flink.runtime.checkpoint.CheckpointsCleaner;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
+import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.concurrent.ComponentMainThreadExecutor;
+import org.apache.flink.runtime.dispatcher.ResolvedTaskManager;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.Execution;
 import org.apache.flink.runtime.executiongraph.ExecutionJobVertex;
@@ -41,6 +43,8 @@ import org.apache.flink.runtime.jobgraph.IntermediateResultPartitionID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
+import org.apache.flink.runtime.jobmaster.JobManagerSharedServices;
+import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
 import org.apache.flink.runtime.scheduler.exceptionhistory.FailureHandlingResultSnapshot;
 import org.apache.flink.runtime.scheduler.strategy.ExecutionVertexID;
@@ -121,14 +125,16 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
             final ExecutionOperations executionOperations,
             final ExecutionVertexVersioner executionVertexVersioner,
             final ExecutionSlotAllocatorFactory executionSlotAllocatorFactory,
-            long initializationTimestamp,
+            final long initializationTimestamp,
             final ComponentMainThreadExecutor mainThreadExecutor,
             final JobStatusListener jobStatusListener,
             final ExecutionGraphFactory executionGraphFactory,
             final ShuffleMaster<?> shuffleMaster,
             final Time rpcTimeout,
             final VertexParallelismStore vertexParallelismStore,
-            final ExecutionDeployer.Factory executionDeployerFactory)
+            final ExecutionDeployer.Factory executionDeployerFactory,
+            final JobManagerSharedServices jobManagerSharedServices,
+            final JobMasterId jobMasterId)
             throws Exception {
 
         super(
@@ -173,7 +179,9 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
 
         this.executionSlotAllocator =
                 checkNotNull(executionSlotAllocatorFactory)
-                        .createInstance(new DefaultExecutionSlotAllocationContext());
+                        .createInstance(
+                                new DefaultExecutionSlotAllocationContext(
+                                        jobManagerSharedServices.getTaskManagers(), jobMasterId));
 
         this.verticesWaitingForRestart = new HashSet<>();
         startUpAction.accept(mainThreadExecutor);
@@ -482,6 +490,14 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
     }
 
     private class DefaultExecutionSlotAllocationContext implements ExecutionSlotAllocationContext {
+        private final Map<ResourceID, ResolvedTaskManager> taskManagers;
+        private final JobMasterId jobMasterId;
+
+        private DefaultExecutionSlotAllocationContext(
+                Map<ResourceID, ResolvedTaskManager> taskManagers, JobMasterId jobMasterId) {
+            this.taskManagers = taskManagers;
+            this.jobMasterId = jobMasterId;
+        }
 
         @Override
         public ResourceProfile getResourceProfile(final ExecutionVertexID executionVertexId) {
@@ -529,6 +545,16 @@ public class DefaultScheduler extends SchedulerBase implements SchedulerOperatio
         @Override
         public Set<AllocationID> getReservedAllocations() {
             return reservedAllocationRefCounters.keySet();
+        }
+
+        @Override
+        public Map<ResourceID, ResolvedTaskManager> getTaskManagers() {
+            return taskManagers;
+        }
+
+        @Override
+        public JobMasterId getJobMasterId() {
+            return jobMasterId;
         }
     }
 }

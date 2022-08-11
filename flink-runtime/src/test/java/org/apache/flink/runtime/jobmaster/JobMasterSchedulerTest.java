@@ -121,7 +121,9 @@ public class JobMasterSchedulerTest extends TestLogger {
                 ComponentMainThreadExecutor mainThreadExecutor,
                 FatalErrorHandler fatalErrorHandler,
                 JobStatusListener jobStatusListener,
-                BlocklistOperations blocklistOperations) {
+                BlocklistOperations blocklistOperations,
+                JobManagerSharedServices jobManagerSharedServices,
+                JobMasterId jobMasterId) {
             return TestingSchedulerNG.newBuilder()
                     .setStartSchedulingRunnable(
                             () -> {

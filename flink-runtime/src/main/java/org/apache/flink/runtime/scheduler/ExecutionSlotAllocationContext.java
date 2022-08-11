@@ -21,12 +21,16 @@ package org.apache.flink.runtime.scheduler;
 
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.runtime.clusterframework.types.AllocationID;
+import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
+import org.apache.flink.runtime.dispatcher.ResolvedTaskManager;
 import org.apache.flink.runtime.jobmanager.scheduler.CoLocationGroup;
 import org.apache.flink.runtime.jobmanager.scheduler.SlotSharingGroup;
+import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.scheduler.strategy.ExecutionVertexID;
 import org.apache.flink.runtime.scheduler.strategy.SchedulingTopology;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -80,4 +84,18 @@ interface ExecutionSlotAllocationContext extends InputsLocationsRetriever, State
      * @return all reserved allocations
      */
     Set<AllocationID> getReservedAllocations();
+
+    /**
+     * Returns all resolved task managers which registered to Dispatcher.
+     *
+     * @return all resolved task managers
+     */
+    Map<ResourceID, ResolvedTaskManager> getTaskManagers();
+
+    /**
+     * Returns master id of the job.
+     *
+     * @return the job master id
+     */
+    JobMasterId getJobMasterId();
 }

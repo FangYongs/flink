@@ -114,7 +114,9 @@ public final class DefaultSlotPoolServiceSchedulerFactory
             ComponentMainThreadExecutor mainThreadExecutor,
             FatalErrorHandler fatalErrorHandler,
             JobStatusListener jobStatusListener,
-            BlocklistOperations blocklistOperations)
+            BlocklistOperations blocklistOperations,
+            JobManagerSharedServices jobManagerSharedServices,
+            JobMasterId jobMasterId)
             throws Exception {
         return schedulerNGFactory.createInstance(
                 log,
@@ -136,7 +138,9 @@ public final class DefaultSlotPoolServiceSchedulerFactory
                 mainThreadExecutor,
                 fatalErrorHandler,
                 jobStatusListener,
-                blocklistOperations);
+                blocklistOperations,
+                jobManagerSharedServices,
+                jobMasterId);
     }
 
     public static DefaultSlotPoolServiceSchedulerFactory create(

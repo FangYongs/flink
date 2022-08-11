@@ -232,6 +232,7 @@ public class ResourceManagerTaskExecutorTest extends TestLogger {
                     new TaskExecutorRegistration(
                             taskExecutorGateway.getAddress(),
                             taskExecutorResourceID,
+                            "localhost",
                             dataPort,
                             jmxPort,
                             hardwareDescription,
@@ -302,6 +303,7 @@ public class ResourceManagerTaskExecutorTest extends TestLogger {
                 new TaskExecutorRegistration(
                         taskExecutorGateway.getAddress(),
                         taskExecutorResourceID,
+                        "localhost",
                         dataPort,
                         jmxPort,
                         hardwareDescription,
@@ -380,6 +382,7 @@ public class ResourceManagerTaskExecutorTest extends TestLogger {
                 new TaskExecutorRegistration(
                         taskExecutorAddress,
                         taskExecutorResourceID,
+                        "localhost",
                         dataPort,
                         jmxPort,
                         hardwareDescription,

@@ -23,6 +23,8 @@ import org.apache.flink.configuration.CoreOptions;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.runtime.blob.BlobServer;
 import org.apache.flink.runtime.blob.BlobWriter;
+import org.apache.flink.runtime.clusterframework.types.ResourceID;
+import org.apache.flink.runtime.dispatcher.ResolvedTaskManager;
 import org.apache.flink.runtime.execution.librarycache.BlobLibraryCacheManager;
 import org.apache.flink.runtime.execution.librarycache.LibraryCacheManager;
 import org.apache.flink.runtime.rpc.FatalErrorHandler;
@@ -36,9 +38,14 @@ import org.apache.flink.util.ExecutorUtils;
 import org.apache.flink.util.FlinkUserCodeClassLoaders;
 import org.apache.flink.util.concurrent.ExecutorThreadFactory;
 
+import org.apache.flink.shaded.guava30.com.google.common.collect.ImmutableMap;
+
 import javax.annotation.Nonnull;
 
 import java.time.Duration;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -65,6 +72,8 @@ public class JobManagerSharedServices {
 
     @Nonnull private final BlobWriter blobWriter;
 
+    private final Map<ResourceID, ResolvedTaskManager> taskManagers;
+
     public JobManagerSharedServices(
             ScheduledExecutorService futureExecutor,
             ExecutorService ioExecutor,
@@ -77,6 +86,7 @@ public class JobManagerSharedServices {
         this.libraryCacheManager = checkNotNull(libraryCacheManager);
         this.shuffleMaster = checkNotNull(shuffleMaster);
         this.blobWriter = blobWriter;
+        this.taskManagers = new ConcurrentHashMap<>();
     }
 
     public ScheduledExecutorService getFutureExecutor() {
@@ -98,6 +108,18 @@ public class JobManagerSharedServices {
     @Nonnull
     public BlobWriter getBlobWriter() {
         return blobWriter;
+    }
+
+    public Set<ResourceID> getTaskManagerIds() {
+        return taskManagers.keySet();
+    }
+
+    public void addTaskManager(ResourceID resourceID, ResolvedTaskManager resolvedTaskManager) {
+        taskManagers.put(resourceID, resolvedTaskManager);
+    }
+
+    public ResolvedTaskManager removeTaskManager(ResourceID resourceID) {
+        return taskManagers.remove(resourceID);
     }
 
     /**
@@ -131,6 +153,15 @@ public class JobManagerSharedServices {
             ExceptionUtils.rethrowException(
                     exception, "Error while shutting down JobManager services");
         }
+
+        for (ResolvedTaskManager resolvedTaskManager : taskManagers.values()) {
+            resolvedTaskManager.close();
+        }
+        taskManagers.clear();
+    }
+
+    public Map<ResourceID, ResolvedTaskManager> getTaskManagers() {
+        return ImmutableMap.copyOf(taskManagers);
     }
 
     // ------------------------------------------------------------------------

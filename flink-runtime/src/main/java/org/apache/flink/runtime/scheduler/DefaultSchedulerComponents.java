@@ -21,17 +21,21 @@ package org.apache.flink.runtime.scheduler;
 
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.runtime.concurrent.ComponentMainThreadExecutor;
 import org.apache.flink.runtime.jobgraph.JobType;
+import org.apache.flink.runtime.jobmaster.slotpool.JobTaskManagerCounter;
 import org.apache.flink.runtime.jobmaster.slotpool.PhysicalSlotProvider;
 import org.apache.flink.runtime.jobmaster.slotpool.PhysicalSlotProviderImpl;
 import org.apache.flink.runtime.jobmaster.slotpool.PhysicalSlotRequestBulkChecker;
 import org.apache.flink.runtime.jobmaster.slotpool.PhysicalSlotRequestBulkCheckerImpl;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPool;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotSelectionStrategy;
+import org.apache.flink.runtime.jobmaster.slotpool.TaskManagerSlotProvider;
 import org.apache.flink.runtime.scheduler.strategy.PipelinedRegionSchedulingStrategy;
 import org.apache.flink.runtime.scheduler.strategy.SchedulingStrategyFactory;
 import org.apache.flink.runtime.util.SlotSelectionStrategyUtils;
+import org.apache.flink.runtime.util.TaskManagerSelectionStrategyUtils;
 import org.apache.flink.util.clock.SystemClock;
 
 import java.util.function.Consumer;
@@ -76,16 +80,36 @@ public class DefaultSchedulerComponents {
             final Configuration jobMasterConfiguration,
             final SlotPool slotPool,
             final Time slotRequestTimeout) {
+        return createSchedulerComponents(
+                jobType,
+                false,
+                isApproximateLocalRecoveryEnabled,
+                jobMasterConfiguration,
+                slotPool,
+                slotRequestTimeout);
+    }
+
+    static DefaultSchedulerComponents createSchedulerComponents(
+            final JobType jobType,
+            final boolean isOlapModeEnable,
+            final boolean isApproximateLocalRecoveryEnabled,
+            final Configuration jobMasterConfiguration,
+            final SlotPool slotPool,
+            final Time slotRequestTimeout) {
 
         checkArgument(
                 !isApproximateLocalRecoveryEnabled,
                 "Approximate local recovery can not be used together with PipelinedRegionScheduler for now! ");
+        checkArgument(
+                !(jobType == JobType.STREAMING && isOlapModeEnable),
+                "Only batch job support olap mode enable!");
         return createPipelinedRegionSchedulerComponents(
-                jobType, jobMasterConfiguration, slotPool, slotRequestTimeout);
+                jobType, isOlapModeEnable, jobMasterConfiguration, slotPool, slotRequestTimeout);
     }
 
     private static DefaultSchedulerComponents createPipelinedRegionSchedulerComponents(
             final JobType jobType,
+            final boolean isOlapModeEnable,
             final Configuration jobMasterConfiguration,
             final SlotPool slotPool,
             final Time slotRequestTimeout) {
@@ -97,13 +121,25 @@ public class DefaultSchedulerComponents {
                 PhysicalSlotRequestBulkCheckerImpl.createFromSlotPool(
                         slotPool, SystemClock.getInstance());
         final PhysicalSlotProvider physicalSlotProvider =
-                new PhysicalSlotProviderImpl(slotSelectionStrategy, slotPool);
+                isOlapModeEnable
+                        ? new TaskManagerSlotProvider()
+                        : new PhysicalSlotProviderImpl(slotSelectionStrategy, slotPool);
         final ExecutionSlotAllocatorFactory allocatorFactory =
-                new SlotSharingExecutionSlotAllocatorFactory(
-                        physicalSlotProvider,
-                        jobType == JobType.STREAMING,
-                        bulkChecker,
-                        slotRequestTimeout);
+                isOlapModeEnable
+                        ? new LocalExecutionSlotAllocatorFactory(
+                                physicalSlotProvider,
+                                TaskManagerSelectionStrategyUtils
+                                        .selectTaskManagerSelectionStrategy(jobMasterConfiguration),
+                                new JobTaskManagerCounter(
+                                        jobMasterConfiguration.getInteger(
+                                                JobManagerOptions.JOB_MINIMUM_TASK_MANAGER_COUNT),
+                                        jobMasterConfiguration.getInteger(
+                                                JobManagerOptions.JOB_TASK_PER_TASK_MANAGER_COUNT)))
+                        : new SlotSharingExecutionSlotAllocatorFactory(
+                                physicalSlotProvider,
+                                jobType == JobType.STREAMING,
+                                bulkChecker,
+                                slotRequestTimeout);
         return new DefaultSchedulerComponents(
                 new PipelinedRegionSchedulingStrategy.Factory(),
                 bulkChecker::start,

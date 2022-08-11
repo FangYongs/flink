@@ -41,6 +41,8 @@ import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobType;
 import org.apache.flink.runtime.jobgraph.JobVertex;
 import org.apache.flink.runtime.jobmaster.ExecutionDeploymentTracker;
+import org.apache.flink.runtime.jobmaster.JobManagerSharedServices;
+import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.jobmaster.slotpool.PhysicalSlotProvider;
 import org.apache.flink.runtime.jobmaster.slotpool.PhysicalSlotProviderImpl;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPool;
@@ -95,7 +97,9 @@ public class AdaptiveBatchSchedulerFactory implements SchedulerNGFactory {
             ComponentMainThreadExecutor mainThreadExecutor,
             FatalErrorHandler fatalErrorHandler,
             JobStatusListener jobStatusListener,
-            BlocklistOperations blocklistOperations)
+            BlocklistOperations blocklistOperations,
+            JobManagerSharedServices jobManagerSharedServices,
+            JobMasterId jobMasterId)
             throws Exception {
 
         checkState(
@@ -178,7 +182,9 @@ public class AdaptiveBatchSchedulerFactory implements SchedulerNGFactory {
                     DefaultVertexParallelismDecider.from(jobMasterConfiguration),
                     DefaultVertexParallelismDecider.getNormalizedMaxParallelism(
                             jobMasterConfiguration),
-                    blocklistOperations);
+                    blocklistOperations,
+                    jobManagerSharedServices,
+                    jobMasterId);
         } else {
             return new AdaptiveBatchScheduler(
                     log,
@@ -206,7 +212,9 @@ public class AdaptiveBatchSchedulerFactory implements SchedulerNGFactory {
                     rpcTimeout,
                     DefaultVertexParallelismDecider.from(jobMasterConfiguration),
                     DefaultVertexParallelismDecider.getNormalizedMaxParallelism(
-                            jobMasterConfiguration));
+                            jobMasterConfiguration),
+                    jobManagerSharedServices,
+                    jobMasterId);
         }
     }
 

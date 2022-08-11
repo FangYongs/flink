@@ -87,6 +87,8 @@ public class JobGraph implements Serializable {
 
     private JobType jobType = JobType.BATCH;
 
+    private boolean olapModeEnable = false;
+
     /**
      * Whether approximate local recovery is enabled. This flag will be removed together with legacy
      * scheduling strategies.
@@ -221,6 +223,24 @@ public class JobGraph implements Serializable {
 
     public JobType getJobType() {
         return jobType;
+    }
+
+    public void setOlapModeEnable(boolean olapModeEnable) {
+        if (olapModeEnable) {
+            JobType jobType = getJobType();
+            if (jobType == JobType.BATCH) {
+                this.olapModeEnable = true;
+            } else {
+                throw new RuntimeException(
+                        "Olap mode enable can be set true only when job type is BATCH " + jobType);
+            }
+        } else {
+            this.olapModeEnable = false;
+        }
+    }
+
+    public boolean isOlapModeEnable() {
+        return olapModeEnable;
     }
 
     public void enableApproximateLocalRecovery(boolean enabled) {

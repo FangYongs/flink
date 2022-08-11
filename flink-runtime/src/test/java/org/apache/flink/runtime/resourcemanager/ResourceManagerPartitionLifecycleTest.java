@@ -189,6 +189,7 @@ public class ResourceManagerPartitionLifecycleTest extends TestLogger {
                 new TaskExecutorRegistration(
                         taskExecutorAddress,
                         taskExecutorId,
+                        "localhost",
                         1234,
                         23456,
                         new HardwareDescription(42, 1337L, 1337L, 0L),

@@ -1251,7 +1251,8 @@ public abstract class ResourceManager<WorkerType extends ResourceIDRetrievable>
         taskManagerHeartbeatManager.unmonitorTarget(resourceID);
 
         WorkerRegistration<WorkerType> workerRegistration = taskExecutors.remove(resourceID);
-        TaskExecutorRegistration taskExecutorRegistration = taskExecutorRegistrations.remove(resourceID);
+        TaskExecutorRegistration taskExecutorRegistration =
+                taskExecutorRegistrations.remove(resourceID);
 
         if (workerRegistration != null) {
             log.info(

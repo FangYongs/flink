@@ -177,6 +177,8 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId>
 
     private final boolean retrieveTaskManagerHostName;
 
+    private final JobManagerSharedServices jobManagerSharedServices;
+
     // --------- ResourceManager --------
 
     private final LeaderRetrievalService resourceManagerLeaderRetriever;
@@ -289,6 +291,7 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId>
         this.executionDeploymentReconciler =
                 executionDeploymentReconcilerFactory.create(executionStateReconciliationHandler);
 
+        this.jobManagerSharedServices = jobManagerSharedServices;
         this.jobMasterConfiguration = checkNotNull(jobMasterConfiguration);
         this.resourceId = checkNotNull(resourceId);
         this.jobGraph = checkNotNull(jobGraph);
@@ -386,7 +389,9 @@ public class JobMaster extends FencedRpcEndpoint<JobMasterId>
                         getMainThreadExecutor(),
                         fatalErrorHandler,
                         jobStatusListener,
-                        blocklistHandler::addNewBlockedNodes);
+                        blocklistHandler::addNewBlockedNodes,
+                        jobManagerSharedServices,
+                        getFencingToken());
 
         return scheduler;
     }

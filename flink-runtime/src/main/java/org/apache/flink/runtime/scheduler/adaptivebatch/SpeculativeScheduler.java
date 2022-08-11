@@ -42,6 +42,8 @@ import org.apache.flink.runtime.executiongraph.failover.flip1.FailureHandlingRes
 import org.apache.flink.runtime.executiongraph.failover.flip1.RestartBackoffTimeStrategy;
 import org.apache.flink.runtime.io.network.partition.PartitionException;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobmaster.JobManagerSharedServices;
+import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
 import org.apache.flink.runtime.scheduler.ExecutionGraphFactory;
@@ -121,7 +123,9 @@ public class SpeculativeScheduler extends AdaptiveBatchScheduler
             final Time rpcTimeout,
             final VertexParallelismDecider vertexParallelismDecider,
             final int defaultMaxParallelism,
-            final BlocklistOperations blocklistOperations)
+            final BlocklistOperations blocklistOperations,
+            final JobManagerSharedServices jobManagerSharedServices,
+            final JobMasterId jobMasterId)
             throws Exception {
 
         super(
@@ -148,7 +152,9 @@ public class SpeculativeScheduler extends AdaptiveBatchScheduler
                 shuffleMaster,
                 rpcTimeout,
                 vertexParallelismDecider,
-                defaultMaxParallelism);
+                defaultMaxParallelism,
+                jobManagerSharedServices,
+                jobMasterId);
 
         this.maxConcurrentExecutions =
                 jobMasterConfiguration.getInteger(

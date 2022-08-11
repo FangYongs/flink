@@ -134,6 +134,7 @@ class TaskExecutorToResourceManagerConnectionTest {
                 new TaskExecutorRegistration(
                         TASK_MANAGER_ADDRESS,
                         TASK_MANAGER_RESOURCE_ID,
+                        TASK_MANAGER_ADDRESS,
                         TASK_MANAGER_DATA_PORT,
                         TASK_MANAGER_JMX_PORT,
                         TASK_MANAGER_HARDWARE_DESCRIPTION,

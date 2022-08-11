@@ -1019,6 +1019,7 @@ public class ActiveResourceManagerTest extends TestLogger {
                     new TaskExecutorRegistration(
                             resourceID.toString(),
                             resourceID,
+                            "localhost",
                             1234,
                             23456,
                             new HardwareDescription(1, 2L, 3L, 4L),

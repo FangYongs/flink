@@ -35,6 +35,8 @@ import org.apache.flink.runtime.executiongraph.failover.flip1.RestartBackoffTime
 import org.apache.flink.runtime.io.network.partition.JobMasterPartitionTracker;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobmaster.ExecutionDeploymentTracker;
+import org.apache.flink.runtime.jobmaster.JobManagerSharedServices;
+import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPool;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPoolService;
 import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
@@ -74,7 +76,9 @@ public class DefaultSchedulerFactory implements SchedulerNGFactory {
             final ComponentMainThreadExecutor mainThreadExecutor,
             final FatalErrorHandler fatalErrorHandler,
             final JobStatusListener jobStatusListener,
-            final BlocklistOperations blocklistOperations)
+            final BlocklistOperations blocklistOperations,
+            final JobManagerSharedServices jobManagerSharedServices,
+            final JobMasterId jobMasterId)
             throws Exception {
 
         final SlotPool slotPool =
@@ -88,6 +92,7 @@ public class DefaultSchedulerFactory implements SchedulerNGFactory {
         final DefaultSchedulerComponents schedulerComponents =
                 createSchedulerComponents(
                         jobGraph.getJobType(),
+                        jobGraph.isOlapModeEnable(),
                         jobGraph.isApproximateLocalRecoveryEnabled(),
                         jobMasterConfiguration,
                         slotPool,
@@ -150,7 +155,9 @@ public class DefaultSchedulerFactory implements SchedulerNGFactory {
                 shuffleMaster,
                 rpcTimeout,
                 computeVertexParallelismStore(jobGraph),
-                new DefaultExecutionDeployer.Factory());
+                new DefaultExecutionDeployer.Factory(),
+                jobManagerSharedServices,
+                jobMasterId);
     }
 
     @Override

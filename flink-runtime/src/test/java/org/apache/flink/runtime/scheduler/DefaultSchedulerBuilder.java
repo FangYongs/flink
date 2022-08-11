@@ -39,6 +39,9 @@ import org.apache.flink.runtime.io.network.partition.JobMasterPartitionTracker;
 import org.apache.flink.runtime.io.network.partition.NoOpJobMasterPartitionTracker;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobmaster.DefaultExecutionDeploymentTracker;
+import org.apache.flink.runtime.jobmaster.JobManagerSharedServices;
+import org.apache.flink.runtime.jobmaster.JobMasterId;
+import org.apache.flink.runtime.jobmaster.TestingJobManagerSharedServicesBuilder;
 import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
 import org.apache.flink.runtime.metrics.groups.UnregisteredMetricGroups;
 import org.apache.flink.runtime.scheduler.adaptivebatch.AdaptiveBatchScheduler;
@@ -99,6 +102,8 @@ public class DefaultSchedulerBuilder {
     private int defaultMaxParallelism =
             JobManagerOptions.ADAPTIVE_BATCH_SCHEDULER_MAX_PARALLELISM.defaultValue();
     private BlocklistOperations blocklistOperations = ignore -> {};
+    private JobManagerSharedServices jobManagerSharedServices =
+            new TestingJobManagerSharedServicesBuilder().build();
 
     public DefaultSchedulerBuilder(
             JobGraph jobGraph,
@@ -279,7 +284,9 @@ public class DefaultSchedulerBuilder {
                 shuffleMaster,
                 rpcTimeout,
                 computeVertexParallelismStore(jobGraph),
-                executionDeployerFactory);
+                executionDeployerFactory,
+                jobManagerSharedServices,
+                JobMasterId.generate());
     }
 
     public AdaptiveBatchScheduler buildAdaptiveBatchJobScheduler() throws Exception {
@@ -307,7 +314,9 @@ public class DefaultSchedulerBuilder {
                 shuffleMaster,
                 rpcTimeout,
                 vertexParallelismDecider,
-                defaultMaxParallelism);
+                defaultMaxParallelism,
+                jobManagerSharedServices,
+                JobMasterId.generate());
     }
 
     public SpeculativeScheduler buildSpeculativeScheduler() throws Exception {
@@ -336,7 +345,9 @@ public class DefaultSchedulerBuilder {
                 rpcTimeout,
                 vertexParallelismDecider,
                 defaultMaxParallelism,
-                blocklistOperations);
+                blocklistOperations,
+                jobManagerSharedServices,
+                JobMasterId.generate());
     }
 
     private ExecutionGraphFactory createExecutionGraphFactory(boolean isDynamicGraph) {

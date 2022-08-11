@@ -87,6 +87,8 @@ public interface SlotPoolServiceSchedulerFactory {
             ComponentMainThreadExecutor mainThreadExecutor,
             FatalErrorHandler fatalErrorHandler,
             JobStatusListener jobStatusListener,
-            BlocklistOperations blocklistOperations)
+            BlocklistOperations blocklistOperations,
+            JobManagerSharedServices jobManagerSharedServices,
+            JobMasterId jobMasterId)
             throws Exception;
 }

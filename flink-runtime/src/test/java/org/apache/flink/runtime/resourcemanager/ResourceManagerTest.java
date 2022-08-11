@@ -235,6 +235,7 @@ class ResourceManagerTest {
                 new TaskExecutorRegistration(
                         taskExecutorAddress,
                         taskExecutorId,
+                        "localhost",
                         dataPort,
                         jmxPort,
                         hardwareDescription,
@@ -741,6 +742,7 @@ class ResourceManagerTest {
                 new TaskExecutorRegistration(
                         taskExecutorGateway.getAddress(),
                         taskManagerId,
+                        "localhost",
                         dataPort,
                         jmxPort,
                         hardwareDescription,

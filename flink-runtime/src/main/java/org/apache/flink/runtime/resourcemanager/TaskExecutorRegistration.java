@@ -23,6 +23,7 @@ import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.instance.HardwareDescription;
 import org.apache.flink.runtime.taskexecutor.TaskExecutorMemoryConfiguration;
+import org.apache.flink.runtime.taskmanager.UnresolvedTaskManagerLocation;
 
 import java.io.Serializable;
 
@@ -37,6 +38,9 @@ public class TaskExecutorRegistration implements Serializable {
 
     /** The resource ID of the TaskExecutor that registers. */
     private final ResourceID resourceId;
+
+    /** The external address of the TaskExecutor. */
+    private final String externalAddress;
 
     /** Port used for data communication between TaskExecutors. */
     private final int dataPort;
@@ -67,6 +71,7 @@ public class TaskExecutorRegistration implements Serializable {
     public TaskExecutorRegistration(
             final String taskExecutorAddress,
             final ResourceID resourceId,
+            final String externalAddress,
             final int dataPort,
             final int jmxPort,
             final HardwareDescription hardwareDescription,
@@ -76,6 +81,7 @@ public class TaskExecutorRegistration implements Serializable {
             final String nodeId) {
         this.taskExecutorAddress = checkNotNull(taskExecutorAddress);
         this.resourceId = checkNotNull(resourceId);
+        this.externalAddress = externalAddress;
         this.dataPort = dataPort;
         this.jmxPort = jmxPort;
         this.hardwareDescription = checkNotNull(hardwareDescription);
@@ -91,6 +97,10 @@ public class TaskExecutorRegistration implements Serializable {
 
     public ResourceID getResourceId() {
         return resourceId;
+    }
+
+    public String getExternalAddress() {
+        return externalAddress;
     }
 
     public int getDataPort() {
@@ -119,5 +129,9 @@ public class TaskExecutorRegistration implements Serializable {
 
     public String getNodeId() {
         return nodeId;
+    }
+
+    public UnresolvedTaskManagerLocation getUnresolvedTaskManagerLocation() {
+        return new UnresolvedTaskManagerLocation(resourceId, externalAddress, dataPort, nodeId);
     }
 }

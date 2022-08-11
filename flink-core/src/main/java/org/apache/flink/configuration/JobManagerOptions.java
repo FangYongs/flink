@@ -410,6 +410,23 @@ public class JobManagerOptions {
                     .defaultValue(HeartbeatManagerOptions.HEARTBEAT_TIMEOUT.defaultValue())
                     .withDescription("The timeout in milliseconds for a idle slot in Slot Pool.");
 
+    /** Minimum task manager count for job if there are enough task managers. */
+    @Documentation.Section(Documentation.Sections.EXPERT_SCHEDULING)
+    public static final ConfigOption<Integer> JOB_MINIMUM_TASK_MANAGER_COUNT =
+            key("job.minimum-task-manager.count")
+                    .intType()
+                    .defaultValue(10)
+                    .withDescription(
+                            "Minimum task manager count for job if there are enough task managers.");
+
+    /** Task count per task manager for each job. */
+    @Documentation.Section(Documentation.Sections.EXPERT_SCHEDULING)
+    public static final ConfigOption<Integer> JOB_TASK_PER_TASK_MANAGER_COUNT =
+            key("job.task-per-task-manager.count")
+                    .intType()
+                    .defaultValue(30)
+                    .withDescription("Task count per task manager for each job.");
+
     /** Config parameter determining the scheduler implementation. */
     @Documentation.Section({
         Documentation.Sections.EXPERT_SCHEDULING,

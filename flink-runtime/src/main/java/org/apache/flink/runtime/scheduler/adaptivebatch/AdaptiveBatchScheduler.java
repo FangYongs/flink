@@ -40,6 +40,8 @@ import org.apache.flink.runtime.jobgraph.jsonplan.JsonPlanGenerator;
 import org.apache.flink.runtime.jobgraph.topology.DefaultLogicalResult;
 import org.apache.flink.runtime.jobgraph.topology.DefaultLogicalTopology;
 import org.apache.flink.runtime.jobgraph.topology.DefaultLogicalVertex;
+import org.apache.flink.runtime.jobmaster.JobManagerSharedServices;
+import org.apache.flink.runtime.jobmaster.JobMasterId;
 import org.apache.flink.runtime.metrics.groups.JobManagerJobMetricGroup;
 import org.apache.flink.runtime.scheduler.DefaultExecutionDeployer;
 import org.apache.flink.runtime.scheduler.DefaultScheduler;
@@ -95,14 +97,16 @@ public class AdaptiveBatchScheduler extends DefaultScheduler {
             final ExecutionOperations executionOperations,
             final ExecutionVertexVersioner executionVertexVersioner,
             final ExecutionSlotAllocatorFactory executionSlotAllocatorFactory,
-            long initializationTimestamp,
+            final long initializationTimestamp,
             final ComponentMainThreadExecutor mainThreadExecutor,
             final JobStatusListener jobStatusListener,
             final ExecutionGraphFactory executionGraphFactory,
             final ShuffleMaster<?> shuffleMaster,
             final Time rpcTimeout,
             final VertexParallelismDecider vertexParallelismDecider,
-            int defaultMaxParallelism)
+            final int defaultMaxParallelism,
+            final JobManagerSharedServices jobManagerSharedServices,
+            final JobMasterId jobMasterId)
             throws Exception {
 
         super(
@@ -130,7 +134,9 @@ public class AdaptiveBatchScheduler extends DefaultScheduler {
                 rpcTimeout,
                 computeVertexParallelismStoreForDynamicGraph(
                         jobGraph.getVertices(), defaultMaxParallelism),
-                new DefaultExecutionDeployer.Factory());
+                new DefaultExecutionDeployer.Factory(),
+                jobManagerSharedServices,
+                jobMasterId);
 
         this.logicalTopology = DefaultLogicalTopology.fromJobGraph(jobGraph);
 
