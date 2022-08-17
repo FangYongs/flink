@@ -456,7 +456,7 @@ public class StreamTaskTest extends TestLogger {
 
             task.startTaskThread();
 
-            verify(taskManagerActions, timeout(2000L)).updateTaskExecutionState(eq(state));
+            verify(taskManagerActions, timeout(2000L)).updateTaskExecutionState(task.getJobID(), eq(state));
 
             // send a cancel. because the operator takes a long time to deserialize, this should
             // hit the task before the operator is deserialized

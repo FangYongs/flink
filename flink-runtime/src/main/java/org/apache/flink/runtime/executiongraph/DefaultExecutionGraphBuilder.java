@@ -107,7 +107,8 @@ public class DefaultExecutionGraphBuilder {
                         jobGraph.getSerializedExecutionConfig(),
                         jobGraph.getJobConfiguration(),
                         jobGraph.getUserJarBlobKeys(),
-                        jobGraph.getClasspaths());
+                        jobGraph.getClasspaths(),
+                        jobGraph.isOlapModeEnable());
 
         final int executionHistorySizeLimit =
                 jobManagerConfig.getInteger(JobManagerOptions.MAX_ATTEMPTS_HISTORY_SIZE);

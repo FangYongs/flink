@@ -47,7 +47,7 @@ import java.util.concurrent.CompletableFuture;
 /** Task table with shared slots implementation of {@link TaskSlotTable}. */
 public class TaskShareSlotTable<T extends TaskSlotPayload> implements TaskSlotTable<T> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TaskSlotTableImpl.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TaskShareSlotTable.class);
 
     /** The table state. */
     private volatile State state;
@@ -107,7 +107,7 @@ public class TaskShareSlotTable<T extends TaskSlotPayload> implements TaskSlotTa
 
     @Override
     public Set<AllocationID> getActiveTaskSlotAllocationIdsPerJob(JobID jobId) {
-        throw new UnsupportedOperationException();
+        return Collections.emptySet();
     }
 
     // ---------------------------------------------------------------------
@@ -153,7 +153,7 @@ public class TaskShareSlotTable<T extends TaskSlotPayload> implements TaskSlotTa
 
     @Override
     public int freeSlot(AllocationID allocationId, Throwable cause) throws SlotNotFoundException {
-        throw new UnsupportedOperationException();
+        return -1;
     }
 
     @Override
@@ -168,17 +168,17 @@ public class TaskShareSlotTable<T extends TaskSlotPayload> implements TaskSlotTa
 
     @Override
     public boolean tryMarkSlotActive(JobID jobId, AllocationID allocationId) {
-        throw new UnsupportedOperationException();
+        return true;
     }
 
     @Override
     public boolean isSlotFree(int index) {
-        throw new UnsupportedOperationException();
+        return true;
     }
 
     @Override
     public boolean hasAllocatedSlots(JobID jobId) {
-        throw new UnsupportedOperationException();
+        return false;
     }
 
     @Override
@@ -265,18 +265,9 @@ public class TaskShareSlotTable<T extends TaskSlotPayload> implements TaskSlotTa
 
     @Override
     public CompletableFuture<Void> closeAsync() {
-        if (state == State.CREATED) {
+        if (state == State.CREATED || state == State.RUNNING) {
             state = State.CLOSED;
             closingFuture.complete(null);
-        } else if (state == State.RUNNING) {
-            state = State.CLOSING;
-            CompletableFuture<Void> cleanupFuture =
-                    CompletableFuture.runAsync(
-                            () -> {
-                                state = State.CLOSED;
-                            },
-                            mainThreadExecutor);
-            FutureUtils.forward(cleanupFuture, closingFuture);
         }
         return closingFuture;
     }
@@ -321,7 +312,6 @@ public class TaskShareSlotTable<T extends TaskSlotPayload> implements TaskSlotTa
     private enum State {
         CREATED,
         RUNNING,
-        CLOSING,
         CLOSED
     }
 }

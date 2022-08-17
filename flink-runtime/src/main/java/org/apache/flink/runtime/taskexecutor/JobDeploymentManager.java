@@ -22,98 +22,74 @@ import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.jobmaster.JobMasterId;
+import org.apache.flink.runtime.taskexecutor.slot.TaskSlotTable;
+import org.apache.flink.runtime.taskmanager.Task;
 import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 /** Manage the deployed olap job and tasks. */
 public class JobDeploymentManager {
-    // The task deployment descriptors for the job.
-    private final Collection<TaskDeploymentDescriptor> tdds;
-    // The task state list for the job which should be sent to the job master.
-    private final Map<ExecutionAttemptID, TaskExecutionState> updateJobStates;
+    // The task execution attempt ids for the job.
+    private final Set<ExecutionAttemptID> executionAttemptIds;
+    // The terminated tasks for the job.
+    private final Set<ExecutionAttemptID> terminatedTasks;
     // The job master id of the job.
     private final JobMasterId jobMasterId;
     private final JobID jobId;
+    // The task slot table which is used by given job.
+    private final TaskSlotTable<Task> taskSlotTable;
+    private final boolean useShareSlotTable;
     private final long receiveTime;
-
-    // The total tasks count which have been deployed.
-    private int deployTaskCount;
     private long startDeployTime;
 
-    public JobDeploymentManager(JobID jobId, JobMasterId jobMasterId) {
-        this.tdds = new ArrayList<>();
-        this.updateJobStates = new HashMap<>();
+    public JobDeploymentManager(
+            JobID jobId,
+            JobMasterId jobMasterId,
+            TaskSlotTable<Task> taskSlotTable,
+            boolean useShareSlotTable) {
+        this.executionAttemptIds = new HashSet<>();
+        this.terminatedTasks = new HashSet<>();
         this.jobId = jobId;
         this.jobMasterId = jobMasterId;
-        this.deployTaskCount = 0;
+        this.taskSlotTable = taskSlotTable;
+        this.useShareSlotTable = useShareSlotTable;
         this.receiveTime = System.currentTimeMillis();
     }
 
     /**
-     * Add new task deployment descriptors to the tdds.
+     * Add new task execution attempt id to the executionAttemptIds.
      *
-     * @param tdds the new task deployment descriptors
+     * @param executionAttemptId the added task execution attempt id
      */
-    public void addTdds(Collection<TaskDeploymentDescriptor> tdds) {
-        this.tdds.addAll(tdds);
-        addDeployTaskCount(tdds.size());
+    public boolean addExecutionAttemptId(ExecutionAttemptID executionAttemptId) {
+        return executionAttemptIds.add(executionAttemptId);
     }
 
-    /**
-     * Add deploy task count for the given job.
-     *
-     * @param taskCount the new deploy task count.
-     */
-    public void addDeployTaskCount(int taskCount) {
-        this.deployTaskCount += taskCount;
+    private boolean isJobFinished() {
+        return terminatedTasks.size() == executionAttemptIds.size() &&
+                terminatedTasks.equals(executionAttemptIds);
     }
-
-    /**
-     * Get all the task deployment descriptors.
-     *
-     * @return the tdds to be deployed
-     */
-    public Collection<TaskDeploymentDescriptor> getTdds() {
-        Collection<TaskDeploymentDescriptor> currentTdds = new ArrayList<>(tdds.size());
-        currentTdds.addAll(tdds);
-        tdds.clear();
-        return currentTdds;
-    }
-
-    /**
-     * Update a task execution state to the job deployment manager, and the deployment manager will
-     * contains all the tasks' terminal state. When it collects all the finished task states or
-     * receives one failed task state, it will return true and the task executor will send task
-     * state list to the job master.
-     *
-     * @param taskExecutionState the task execution state for the given job
-     * @return true means the job is finished or failed.
-     */
-    public boolean finishJobTask(JobID taskJobId, TaskExecutionState taskExecutionState) {
-        if (!jobId.equals(taskJobId)) {
-            throw new IllegalArgumentException(
-                    "Job deployment manager for job "
-                            + jobId
-                            + " receives task state for job "
-                            + taskJobId
-                            + " execution "
-                            + taskExecutionState.getID());
-        }
-        if (taskExecutionState.getExecutionState().isTerminal()) {
-            updateJobStates.put(taskExecutionState.getID(), taskExecutionState);
-            return (taskExecutionState.getExecutionState().isTerminal()
-                            && !taskExecutionState.getExecutionState().isFinished())
-                    || deployTaskCount == updateJobStates.size();
-        }
-        return false;
+    public boolean finishTask(ExecutionAttemptID executionAttemptId) {
+        terminatedTasks.add(executionAttemptId);
+        return isJobFinished();
     }
 
     public JobMasterId getJobMasterId() {
         return jobMasterId;
+    }
+
+    public TaskSlotTable<Task> getTaskSlotTable() {
+        return taskSlotTable;
+    }
+
+    public boolean isUseShareSlotTable() {
+        return useShareSlotTable;
     }
 
     public long getReceiveTime() {

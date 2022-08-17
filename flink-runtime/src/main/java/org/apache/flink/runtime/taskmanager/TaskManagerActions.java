@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.taskmanager;
 
+import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.taskexecutor.TaskExecutor;
 
@@ -43,7 +44,8 @@ public interface TaskManagerActions {
     /**
      * Notifies the task manager about the task execution state update.
      *
+     * @param jobId the job id
      * @param taskExecutionState Task execution state update
      */
-    void updateTaskExecutionState(TaskExecutionState taskExecutionState);
+    void updateTaskExecutionState(JobID jobId, TaskExecutionState taskExecutionState);
 }

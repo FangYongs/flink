@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.executiongraph;
 
+import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.Configuration;
@@ -52,6 +53,10 @@ public class JobInformation implements Serializable {
     /** URLs specifying the classpath to add to the class loader. */
     private final Collection<URL> requiredClasspathURLs;
 
+    /** Whether the tasks of the job use share slot table. */
+    private final boolean useShareSlotTable;
+
+    @VisibleForTesting
     public JobInformation(
             JobID jobId,
             String jobName,
@@ -59,12 +64,31 @@ public class JobInformation implements Serializable {
             Configuration jobConfiguration,
             Collection<PermanentBlobKey> requiredJarFileBlobKeys,
             Collection<URL> requiredClasspathURLs) {
+        this(
+                jobId,
+                jobName,
+                serializedExecutionConfig,
+                jobConfiguration,
+                requiredJarFileBlobKeys,
+                requiredClasspathURLs,
+                false);
+    }
+
+    public JobInformation(
+            JobID jobId,
+            String jobName,
+            SerializedValue<ExecutionConfig> serializedExecutionConfig,
+            Configuration jobConfiguration,
+            Collection<PermanentBlobKey> requiredJarFileBlobKeys,
+            Collection<URL> requiredClasspathURLs,
+            boolean useShareSlotTable) {
         this.jobId = Preconditions.checkNotNull(jobId);
         this.jobName = Preconditions.checkNotNull(jobName);
         this.serializedExecutionConfig = Preconditions.checkNotNull(serializedExecutionConfig);
         this.jobConfiguration = Preconditions.checkNotNull(jobConfiguration);
         this.requiredJarFileBlobKeys = Preconditions.checkNotNull(requiredJarFileBlobKeys);
         this.requiredClasspathURLs = Preconditions.checkNotNull(requiredClasspathURLs);
+        this.useShareSlotTable = useShareSlotTable;
     }
 
     public JobID getJobId() {
@@ -89,6 +113,10 @@ public class JobInformation implements Serializable {
 
     public Collection<URL> getRequiredClasspathURLs() {
         return requiredClasspathURLs;
+    }
+
+    public boolean isUseShareSlotTable() {
+        return useShareSlotTable;
     }
 
     // ------------------------------------------------------------------------

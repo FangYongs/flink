@@ -896,7 +896,7 @@ public class Task
             }
 
             taskManagerActions.updateTaskExecutionState(
-                    new TaskExecutionState(executionId, ExecutionState.INITIALIZING));
+                    jobId, new TaskExecutionState(executionId, ExecutionState.INITIALIZING));
 
             // make sure the user code classloader is accessible thread-locally
             executingThread.setContextClassLoader(userCodeClassLoader.asClassLoader());
@@ -909,7 +909,7 @@ public class Task
 
             // notify everyone that we switched to running
             taskManagerActions.updateTaskExecutionState(
-                    new TaskExecutionState(executionId, ExecutionState.RUNNING));
+                    jobId, new TaskExecutionState(executionId, ExecutionState.RUNNING));
 
             runWithSystemExitMonitoring(finalInvokable::invoke);
         } catch (Throwable throwable) {
@@ -1034,7 +1034,7 @@ public class Task
     private void notifyFinalState() {
         checkState(executionState.isTerminal());
         taskManagerActions.updateTaskExecutionState(
-                new TaskExecutionState(executionId, executionState, failureCause));
+                jobId, new TaskExecutionState(executionId, executionState, failureCause));
     }
 
     private void notifyFatalError(String message, Throwable cause) {
