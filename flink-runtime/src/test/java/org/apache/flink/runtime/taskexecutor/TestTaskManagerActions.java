@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.taskexecutor;
 
+import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
@@ -65,7 +66,7 @@ public class TestTaskManagerActions implements TaskManagerActions {
     }
 
     @Override
-    public void updateTaskExecutionState(TaskExecutionState taskExecutionState) {
+    public void updateTaskExecutionState(JobID jobId, TaskExecutionState taskExecutionState) {
         Optional<CompletableFuture<Void>> listenerFuture =
                 taskManagerActionListeners.getListenerFuture(
                         taskExecutionState.getID(), taskExecutionState.getExecutionState());

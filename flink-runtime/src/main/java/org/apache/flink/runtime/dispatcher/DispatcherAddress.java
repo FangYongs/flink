@@ -16,20 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.taskmanager;
+package org.apache.flink.runtime.dispatcher;
 
-import org.apache.flink.api.common.JobID;
-import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
+import java.io.Serializable;
 
-/** Dummy implementation of {@link TaskManagerActions}. */
-public class NoOpTaskManagerActions implements TaskManagerActions {
+/**
+ * The address of the dispatcher.
+ */
+public class DispatcherAddress implements Serializable {
+    private static final long serialVersionUID = 1L;
 
-    @Override
-    public void notifyFatalError(String message, Throwable cause) {}
+    private final String address;
 
-    @Override
-    public void failTask(ExecutionAttemptID executionAttemptID, Throwable cause) {}
+    private final DispatcherId dispatcherId;
 
-    @Override
-    public void updateTaskExecutionState(JobID jobId, TaskExecutionState taskExecutionState) {}
+    public DispatcherAddress(final String address, final DispatcherId dispatcherId) {
+        this.address = address;
+        this.dispatcherId = dispatcherId;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public DispatcherId getDispatcherId() {
+        return dispatcherId;
+    }
 }

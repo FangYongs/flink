@@ -19,9 +19,10 @@
 package org.apache.flink.runtime.taskexecutor.rpc;
 
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.JobID;
 import org.apache.flink.api.common.functions.AggregateFunction;
 import org.apache.flink.api.java.ClosureCleaner;
-import org.apache.flink.runtime.jobmaster.JobMasterGateway;
+import org.apache.flink.runtime.dispatcher.JobTaskGateway;
 import org.apache.flink.runtime.taskexecutor.GlobalAggregateManager;
 import org.apache.flink.util.InstantiationUtil;
 
@@ -29,10 +30,12 @@ import java.io.IOException;
 
 public class RpcGlobalAggregateManager implements GlobalAggregateManager {
 
-    private final JobMasterGateway jobMasterGateway;
+    private final JobID jobId;
+    private final JobTaskGateway jobTaskGateway;
 
-    public RpcGlobalAggregateManager(JobMasterGateway jobMasterGateway) {
-        this.jobMasterGateway = jobMasterGateway;
+    public RpcGlobalAggregateManager(JobID jobId, JobTaskGateway jobTaskGateway) {
+        this.jobId = jobId;
+        this.jobTaskGateway = jobTaskGateway;
     }
 
     @Override
@@ -47,9 +50,9 @@ public class RpcGlobalAggregateManager implements GlobalAggregateManager {
         Object result = null;
         try {
             result =
-                    jobMasterGateway
+                    jobTaskGateway
                             .updateGlobalAggregate(
-                                    aggregateName, aggregand, serializedAggregateFunction)
+                                    jobId, aggregateName, aggregand, serializedAggregateFunction)
                             .get();
         } catch (Exception e) {
             throw new IOException("Error updating global aggregate.", e);

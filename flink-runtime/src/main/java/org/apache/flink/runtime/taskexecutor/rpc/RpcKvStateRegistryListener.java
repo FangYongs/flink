@@ -20,8 +20,8 @@ package org.apache.flink.runtime.taskexecutor.rpc;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.queryablestate.KvStateID;
+import org.apache.flink.runtime.dispatcher.JobTaskGateway;
 import org.apache.flink.runtime.jobgraph.JobVertexID;
-import org.apache.flink.runtime.jobmaster.KvStateRegistryGateway;
 import org.apache.flink.runtime.query.KvStateRegistryListener;
 import org.apache.flink.runtime.state.KeyGroupRange;
 import org.apache.flink.util.Preconditions;
@@ -31,12 +31,12 @@ import java.net.InetSocketAddress;
 /** {@link KvStateRegistryListener} implementation for the new RPC service. */
 public class RpcKvStateRegistryListener implements KvStateRegistryListener {
 
-    private final KvStateRegistryGateway kvStateRegistryGateway;
+    private final JobTaskGateway jobTaskGateway;
     private final InetSocketAddress kvStateServerAddress;
 
     public RpcKvStateRegistryListener(
-            KvStateRegistryGateway kvStateRegistryGateway, InetSocketAddress kvStateServerAddress) {
-        this.kvStateRegistryGateway = Preconditions.checkNotNull(kvStateRegistryGateway);
+            JobTaskGateway jobTaskGateway, InetSocketAddress kvStateServerAddress) {
+        this.jobTaskGateway = Preconditions.checkNotNull(jobTaskGateway);
         this.kvStateServerAddress = Preconditions.checkNotNull(kvStateServerAddress);
     }
 
@@ -47,7 +47,7 @@ public class RpcKvStateRegistryListener implements KvStateRegistryListener {
             KeyGroupRange keyGroupRange,
             String registrationName,
             KvStateID kvStateId) {
-        kvStateRegistryGateway.notifyKvStateRegistered(
+        jobTaskGateway.getJobMasterGateway().notifyKvStateRegistered(
                 jobId,
                 jobVertexId,
                 keyGroupRange,
@@ -63,7 +63,7 @@ public class RpcKvStateRegistryListener implements KvStateRegistryListener {
             KeyGroupRange keyGroupRange,
             String registrationName) {
 
-        kvStateRegistryGateway.notifyKvStateUnregistered(
+        jobTaskGateway.getJobMasterGateway().notifyKvStateUnregistered(
                 jobId, jobVertexId, keyGroupRange, registrationName);
     }
 }

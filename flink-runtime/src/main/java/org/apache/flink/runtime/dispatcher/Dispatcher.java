@@ -43,7 +43,9 @@ import org.apache.flink.runtime.dispatcher.cleanup.DispatcherResourceCleanerFact
 import org.apache.flink.runtime.dispatcher.cleanup.ResourceCleaner;
 import org.apache.flink.runtime.dispatcher.cleanup.ResourceCleanerFactory;
 import org.apache.flink.runtime.entrypoint.ClusterEntryPointExceptionUtils;
+import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
+import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.heartbeat.HeartbeatListener;
 import org.apache.flink.runtime.heartbeat.HeartbeatManager;
 import org.apache.flink.runtime.heartbeat.HeartbeatServices;
@@ -53,8 +55,11 @@ import org.apache.flink.runtime.highavailability.HighAvailabilityServices;
 import org.apache.flink.runtime.highavailability.JobResultEntry;
 import org.apache.flink.runtime.highavailability.JobResultStore;
 import org.apache.flink.runtime.highavailability.JobResultStoreOptions;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
 import org.apache.flink.runtime.jobgraph.JobVertex;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobmanager.JobGraphWriter;
 import org.apache.flink.runtime.jobmaster.JobManagerRunner;
@@ -63,6 +68,7 @@ import org.apache.flink.runtime.jobmaster.JobManagerSharedServices;
 import org.apache.flink.runtime.jobmaster.JobMasterGateway;
 import org.apache.flink.runtime.jobmaster.JobResult;
 import org.apache.flink.runtime.jobmaster.ResourceManagerAddress;
+import org.apache.flink.runtime.jobmaster.SerializedInputSplit;
 import org.apache.flink.runtime.jobmaster.factories.DefaultJobManagerJobMetricGroupFactory;
 import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalListener;
 import org.apache.flink.runtime.leaderretrieval.LeaderRetrievalService;
@@ -77,6 +83,7 @@ import org.apache.flink.runtime.metrics.MetricNames;
 import org.apache.flink.runtime.metrics.groups.JobManagerMetricGroup;
 import org.apache.flink.runtime.operators.coordination.CoordinationRequest;
 import org.apache.flink.runtime.operators.coordination.CoordinationResponse;
+import org.apache.flink.runtime.operators.coordination.OperatorEvent;
 import org.apache.flink.runtime.registration.RegisteredRpcConnection;
 import org.apache.flink.runtime.registration.RegistrationResponse;
 import org.apache.flink.runtime.registration.RetryingRegistration;
@@ -95,6 +102,7 @@ import org.apache.flink.runtime.rpc.RpcServiceUtils;
 import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.scheduler.ExecutionGraphInfo;
 import org.apache.flink.runtime.taskexecutor.TaskExecutorGateway;
+import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.runtime.webmonitor.retriever.GatewayRetriever;
 import org.apache.flink.util.ExceptionUtils;
 import org.apache.flink.util.FlinkException;
@@ -1567,6 +1575,66 @@ public abstract class Dispatcher extends FencedRpcEndpoint<DispatcherId>
         } else {
             return null;
         }
+    }
+
+    // ----------------------------------------------------------------------------------------------
+
+    @Override
+    public CompletableFuture<Acknowledge> updateTaskExecutionState(
+            final JobID jobId, final TaskExecutionState taskExecutionState) {
+        return performOperationOnJobMasterGateway(
+                jobId,
+                gateway -> gateway.updateTaskExecutionState(taskExecutionState));
+    }
+
+    @Override
+    public CompletableFuture<SerializedInputSplit> requestNextInputSplit(
+            final JobID jobId, final JobVertexID vertexID, final ExecutionAttemptID executionAttempt) {
+        return performOperationOnJobMasterGateway(
+                jobId,
+                gateway -> gateway.requestNextInputSplit(vertexID, executionAttempt));
+    }
+
+    @Override
+    public CompletableFuture<ExecutionState> requestPartitionState(
+            final JobID jobId, final IntermediateDataSetID intermediateResultId, final ResultPartitionID partitionId) {
+        return performOperationOnJobMasterGateway(
+                jobId,
+                gateway -> gateway.requestPartitionState(intermediateResultId, partitionId));
+    }
+
+    @Override
+    public CompletableFuture<Object> updateGlobalAggregate(
+            JobID jobId, String aggregateName, Object aggregand, byte[] serializedAggregationFunction) {
+        return performOperationOnJobMasterGateway(
+                jobId,
+                gateway -> gateway.updateGlobalAggregate(aggregateName, aggregand, serializedAggregationFunction));
+    }
+
+    @Override
+    public CompletableFuture<Acknowledge> sendOperatorEventToCoordinator(
+            JobID jobId,
+            ExecutionAttemptID task,
+            OperatorID operatorID,
+            SerializedValue<OperatorEvent> event) {
+        return performOperationOnJobMasterGateway(
+                jobId,
+                gateway -> gateway.sendOperatorEventToCoordinator(task, operatorID, event));
+    }
+
+    @Override
+    public CompletableFuture<CoordinationResponse> sendRequestToCoordinator(
+            JobID jobId,
+            OperatorID operatorID,
+            SerializedValue<CoordinationRequest> request) {
+        return performOperationOnJobMasterGateway(
+                jobId,
+                gateway -> gateway.sendRequestToCoordinator(operatorID, request));
+    }
+
+    @Override
+    public JobMasterGateway getJobMasterGateway() {
+        throw new UnsupportedOperationException();
     }
 
     // ----------------------------------------------------------------------------------------------

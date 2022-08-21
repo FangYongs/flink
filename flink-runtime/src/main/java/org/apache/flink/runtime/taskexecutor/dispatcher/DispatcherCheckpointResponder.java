@@ -16,29 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.taskexecutor.rpc;
+package org.apache.flink.runtime.taskexecutor.dispatcher;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.checkpoint.CheckpointException;
 import org.apache.flink.runtime.checkpoint.CheckpointMetrics;
 import org.apache.flink.runtime.checkpoint.TaskStateSnapshot;
-import org.apache.flink.runtime.dispatcher.JobTaskGateway;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
-import org.apache.flink.runtime.messages.checkpoint.DeclineCheckpoint;
 import org.apache.flink.runtime.taskmanager.CheckpointResponder;
-import org.apache.flink.util.Preconditions;
 
-import static org.apache.flink.runtime.checkpoint.TaskStateSnapshot.serializeTaskStateSnapshot;
-
-public class RpcCheckpointResponder implements CheckpointResponder {
-
-    private final JobTaskGateway jobTaskGateway;
-
-    public RpcCheckpointResponder(JobTaskGateway jobTaskGateway) {
-        this.jobTaskGateway =
-                Preconditions.checkNotNull(jobTaskGateway);
-    }
-
+/**
+ * Checkpoint responder in dispatcher.
+ */
+public class DispatcherCheckpointResponder implements CheckpointResponder {
     @Override
     public void acknowledgeCheckpoint(
             JobID jobID,
@@ -46,12 +36,7 @@ public class RpcCheckpointResponder implements CheckpointResponder {
             long checkpointId,
             CheckpointMetrics checkpointMetrics,
             TaskStateSnapshot subtaskState) {
-        jobTaskGateway.getJobMasterGateway().acknowledgeCheckpoint(
-                jobID,
-                executionAttemptID,
-                checkpointId,
-                checkpointMetrics,
-                serializeTaskStateSnapshot(subtaskState));
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -60,8 +45,7 @@ public class RpcCheckpointResponder implements CheckpointResponder {
             ExecutionAttemptID executionAttemptID,
             long checkpointId,
             CheckpointMetrics checkpointMetrics) {
-        jobTaskGateway.getJobMasterGateway().reportCheckpointMetrics(
-                jobID, executionAttemptID, checkpointId, checkpointMetrics);
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -70,9 +54,6 @@ public class RpcCheckpointResponder implements CheckpointResponder {
             ExecutionAttemptID executionAttemptID,
             long checkpointId,
             CheckpointException checkpointException) {
-
-        jobTaskGateway.getJobMasterGateway().declineCheckpoint(
-                new DeclineCheckpoint(
-                        jobID, executionAttemptID, checkpointId, checkpointException));
+        throw new UnsupportedOperationException();
     }
 }

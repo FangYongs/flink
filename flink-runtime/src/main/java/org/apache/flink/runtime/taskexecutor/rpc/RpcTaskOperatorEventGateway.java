@@ -18,6 +18,8 @@
 
 package org.apache.flink.runtime.taskexecutor.rpc;
 
+import org.apache.flink.api.common.JobID;
+import org.apache.flink.runtime.dispatcher.JobTaskGateway;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
 import org.apache.flink.runtime.jobgraph.tasks.TaskOperatorEventGateway;
@@ -37,17 +39,20 @@ import java.util.function.Consumer;
  */
 public class RpcTaskOperatorEventGateway implements TaskOperatorEventGateway {
 
-    private final JobMasterOperatorEventGateway rpcGateway;
+    private final JobID jobId;
+
+    private final JobTaskGateway rpcGateway;
 
     private final ExecutionAttemptID taskExecutionId;
 
     private final Consumer<Throwable> errorHandler;
 
     public RpcTaskOperatorEventGateway(
-            JobMasterOperatorEventGateway rpcGateway,
+            JobID jobId,
+            JobTaskGateway rpcGateway,
             ExecutionAttemptID taskExecutionId,
             Consumer<Throwable> errorHandler) {
-
+        this.jobId = jobId;
         this.rpcGateway = rpcGateway;
         this.taskExecutionId = taskExecutionId;
         this.errorHandler = errorHandler;
@@ -57,7 +62,7 @@ public class RpcTaskOperatorEventGateway implements TaskOperatorEventGateway {
     public void sendOperatorEventToCoordinator(
             OperatorID operator, SerializedValue<OperatorEvent> event) {
         final CompletableFuture<Acknowledge> result =
-                rpcGateway.sendOperatorEventToCoordinator(taskExecutionId, operator, event);
+                rpcGateway.sendOperatorEventToCoordinator(jobId, taskExecutionId, operator, event);
 
         result.whenComplete(
                 (success, exception) -> {
@@ -70,6 +75,6 @@ public class RpcTaskOperatorEventGateway implements TaskOperatorEventGateway {
     @Override
     public CompletableFuture<CoordinationResponse> sendRequestToCoordinator(
             OperatorID operator, SerializedValue<CoordinationRequest> request) {
-        return rpcGateway.sendRequestToCoordinator(operator, request);
+        return rpcGateway.sendRequestToCoordinator(jobId, operator, request);
     }
 }

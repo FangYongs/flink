@@ -19,6 +19,7 @@
 package org.apache.flink.runtime.taskmanager;
 
 import org.apache.flink.api.common.ExecutionConfig;
+import org.apache.flink.api.common.JobID;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.TaskManagerOptions;
 import org.apache.flink.core.testutils.OneShotLatch;
@@ -183,7 +184,7 @@ public class TaskTest extends TestLogger {
                         new NoOpTaskManagerActions() {
                             @Override
                             public void updateTaskExecutionState(
-                                    TaskExecutionState taskExecutionState) {
+                                    JobID jobId, TaskExecutionState taskExecutionState) {
                                 if (taskExecutionState.getExecutionState()
                                         == ExecutionState.INITIALIZING) {
                                     throw new ExpectedTestException();
@@ -1225,7 +1226,7 @@ public class TaskTest extends TestLogger {
         private final BlockingQueue<TaskExecutionState> queue = new LinkedBlockingDeque<>();
 
         @Override
-        public void updateTaskExecutionState(TaskExecutionState taskExecutionState) {
+        public void updateTaskExecutionState(JobID jobId, TaskExecutionState taskExecutionState) {
             queue.offer(taskExecutionState);
         }
 

@@ -27,6 +27,7 @@ import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
+import org.apache.flink.runtime.dispatcher.DispatcherAddress;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.PartitionInfo;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
@@ -170,6 +171,11 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
     }
 
     @Override
+    public CompletableFuture<Void> heartbeatFromDispatcher(ResourceID heartbeatOrigin) {
+        return originalGateway.heartbeatFromDispatcher(heartbeatOrigin);
+    }
+
+    @Override
     public void disconnectJobManager(JobID jobId, Exception cause) {
         originalGateway.disconnectJobManager(jobId, cause);
     }
@@ -177,6 +183,11 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
     @Override
     public void disconnectResourceManager(Exception cause) {
         originalGateway.disconnectResourceManager(cause);
+    }
+
+    @Override
+    public void disconnectDispatcher(Exception cause) {
+        originalGateway.disconnectDispatcher(cause);
     }
 
     @Override
@@ -227,6 +238,13 @@ public class TaskExecutorGatewayDecoratorBase implements TaskExecutorGateway {
     @Override
     public CompletableFuture<ThreadDumpInfo> requestThreadDump(Time timeout) {
         return originalGateway.requestThreadDump(timeout);
+    }
+
+    @Override
+    public CompletableFuture<Acknowledge> registerDispatcher(
+            DispatcherAddress registration,
+            Time timeout) {
+        return originalGateway.registerDispatcher(registration, timeout);
     }
 
     @Override

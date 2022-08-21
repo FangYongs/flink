@@ -28,15 +28,23 @@ import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.dispatcher.DispatcherGateway;
 import org.apache.flink.runtime.dispatcher.DispatcherId;
 import org.apache.flink.runtime.dispatcher.TriggerSavepointMode;
+import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ArchivedExecutionGraph;
+import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
+import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
+import org.apache.flink.runtime.jobgraph.IntermediateDataSetID;
 import org.apache.flink.runtime.jobgraph.JobGraph;
+import org.apache.flink.runtime.jobgraph.JobVertexID;
 import org.apache.flink.runtime.jobgraph.OperatorID;
+import org.apache.flink.runtime.jobmaster.JobMasterGateway;
 import org.apache.flink.runtime.jobmaster.JobResult;
+import org.apache.flink.runtime.jobmaster.SerializedInputSplit;
 import org.apache.flink.runtime.messages.Acknowledge;
 import org.apache.flink.runtime.messages.webmonitor.ClusterOverview;
 import org.apache.flink.runtime.messages.webmonitor.MultipleJobsDetails;
 import org.apache.flink.runtime.operators.coordination.CoordinationRequest;
 import org.apache.flink.runtime.operators.coordination.CoordinationResponse;
+import org.apache.flink.runtime.operators.coordination.OperatorEvent;
 import org.apache.flink.runtime.resourcemanager.ResourceManagerId;
 import org.apache.flink.runtime.resourcemanager.TaskExecutorRegistration;
 import org.apache.flink.runtime.rest.handler.async.OperationResult;
@@ -44,6 +52,7 @@ import org.apache.flink.runtime.rest.handler.job.AsynchronousJobOperationKey;
 import org.apache.flink.runtime.rest.messages.ThreadDumpInfo;
 import org.apache.flink.runtime.rpc.RpcTimeout;
 import org.apache.flink.runtime.scheduler.ExecutionGraphInfo;
+import org.apache.flink.runtime.taskmanager.TaskExecutionState;
 import org.apache.flink.util.SerializedValue;
 import org.apache.flink.util.concurrent.FutureUtils;
 import org.apache.flink.util.function.TriFunction;
@@ -259,6 +268,60 @@ public final class TestingDispatcherGateway extends TestingRestfulGateway
     @Override
     public void offerTaskManagerFromResourceManager(
             Collection<TaskExecutorRegistration> taskExecutorRegistrations, Time timeout) {}
+
+    @Override
+    public CompletableFuture<Acknowledge> updateTaskExecutionState(
+            JobID jobId,
+            TaskExecutionState taskExecutionState) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public CompletableFuture<SerializedInputSplit> requestNextInputSplit(
+            JobID jobId,
+            JobVertexID vertexID,
+            ExecutionAttemptID executionAttempt) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public CompletableFuture<ExecutionState> requestPartitionState(
+            JobID jobId,
+            IntermediateDataSetID intermediateResultId,
+            ResultPartitionID partitionId) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public CompletableFuture<Object> updateGlobalAggregate(
+            JobID jobId,
+            String aggregateName,
+            Object aggregand,
+            byte[] serializedAggregationFunction) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public CompletableFuture<Acknowledge> sendOperatorEventToCoordinator(
+            JobID jobId,
+            ExecutionAttemptID task,
+            OperatorID operatorID,
+            SerializedValue<OperatorEvent> event) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public CompletableFuture<CoordinationResponse> sendRequestToCoordinator(
+            JobID jobId,
+            OperatorID operatorID,
+            SerializedValue<CoordinationRequest> request) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public JobMasterGateway getJobMasterGateway() {
+        throw new UnsupportedOperationException();
+    }
 
     public static Builder newBuilder() {
         return new Builder();

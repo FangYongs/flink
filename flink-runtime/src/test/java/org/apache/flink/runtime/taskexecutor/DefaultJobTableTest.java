@@ -170,7 +170,7 @@ public class DefaultJobTableTest extends TestLogger {
 
         connection.disconnect();
 
-        connection.getJobManagerGateway();
+        connection.getJobTaskGateway();
     }
 
     @Test

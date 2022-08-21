@@ -20,6 +20,8 @@ package org.apache.flink.runtime.taskexecutor;
 
 import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.clusterframework.types.ResourceID;
+import org.apache.flink.runtime.dispatcher.JobTaskGateway;
+import org.apache.flink.runtime.dispatcher.JobTaskMasterGateway;
 import org.apache.flink.runtime.execution.librarycache.LibraryCacheManager;
 import org.apache.flink.runtime.jobmaster.JobMasterGateway;
 import org.apache.flink.runtime.jobmaster.JobMasterId;
@@ -141,8 +143,8 @@ public final class DefaultJobTable implements JobTable {
         }
 
         @Override
-        public JobMasterGateway getJobManagerGateway() {
-            return verifyContainsEstablishedConnection().getJobMasterGateway();
+        public JobTaskGateway getJobTaskGateway() {
+            return new JobTaskMasterGateway(verifyContainsEstablishedConnection().getJobMasterGateway());
         }
 
         @Override

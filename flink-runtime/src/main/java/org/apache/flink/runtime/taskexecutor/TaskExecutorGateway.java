@@ -28,6 +28,7 @@ import org.apache.flink.runtime.clusterframework.types.ResourceID;
 import org.apache.flink.runtime.clusterframework.types.ResourceProfile;
 import org.apache.flink.runtime.clusterframework.types.SlotID;
 import org.apache.flink.runtime.deployment.TaskDeploymentDescriptor;
+import org.apache.flink.runtime.dispatcher.DispatcherAddress;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 import org.apache.flink.runtime.executiongraph.PartitionInfo;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionID;
@@ -198,6 +199,14 @@ public interface TaskExecutorGateway
     CompletableFuture<Void> heartbeatFromResourceManager(ResourceID heartbeatOrigin);
 
     /**
+     * Heartbeat request from the dispatcher.
+     *
+     * @param heartbeatOrigin unique id of the dispatcher
+     * @return future which is completed exceptionally if the operation fails
+     */
+    CompletableFuture<Void> heartbeatFromDispatcher(ResourceID heartbeatOrigin);
+
+    /**
      * Disconnects the given JobManager from the TaskManager.
      *
      * @param jobId JobID for which the JobManager was the leader
@@ -211,6 +220,13 @@ public interface TaskExecutorGateway
      * @param cause for the disconnection from the ResourceManager
      */
     void disconnectResourceManager(Exception cause);
+
+    /**
+     * Disconnects the Dispatcher from the TaskManager.
+     *
+     * @param cause for disconnection from the Dispatcher
+     */
+    void disconnectDispatcher(Exception cause);
 
     /**
      * Frees the slot with the given allocation ID.
@@ -285,4 +301,15 @@ public interface TaskExecutorGateway
      * @return the {@link ThreadDumpInfo} for this TaskManager.
      */
     CompletableFuture<ThreadDumpInfo> requestThreadDump(@RpcTimeout Time timeout);
+
+    /**
+     * Register dispatcher information to the given task executor.
+     *
+     * @param registration the dispatcher information
+     * @param timeout timeout for register dispatcher
+     * @return Future acknowledge which is returned once the dispatcher is registered
+     */
+    CompletableFuture<Acknowledge> registerDispatcher(
+            DispatcherAddress registration,
+            @RpcTimeout Time timeout);
 }

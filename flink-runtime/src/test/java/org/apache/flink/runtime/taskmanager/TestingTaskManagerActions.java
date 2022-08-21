@@ -18,6 +18,7 @@
 
 package org.apache.flink.runtime.taskmanager;
 
+import org.apache.flink.api.common.JobID;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
 
 import java.util.function.BiConsumer;
@@ -52,7 +53,7 @@ public class TestingTaskManagerActions implements TaskManagerActions {
     }
 
     @Override
-    public void updateTaskExecutionState(TaskExecutionState taskExecutionState) {
+    public void updateTaskExecutionState(JobID jobId, TaskExecutionState taskExecutionState) {
         updateTaskExecutionStateConsumer.accept(taskExecutionState);
     }
 

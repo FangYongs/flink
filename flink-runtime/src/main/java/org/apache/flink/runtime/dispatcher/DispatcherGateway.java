@@ -35,7 +35,7 @@ import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 /** Gateway for the Dispatcher component. */
-public interface DispatcherGateway extends FencedRpcGateway<DispatcherId>, RestfulGateway {
+public interface DispatcherGateway extends FencedRpcGateway<DispatcherId>, RestfulGateway, JobTaskGateway {
 
     /**
      * Submit a job to the dispatcher.
