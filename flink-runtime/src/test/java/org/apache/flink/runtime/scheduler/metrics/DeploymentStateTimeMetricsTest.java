@@ -17,10 +17,10 @@
 
 package org.apache.flink.runtime.scheduler.metrics;
 
+import org.apache.flink.api.common.JobType;
 import org.apache.flink.configuration.MetricOptions;
 import org.apache.flink.runtime.execution.ExecutionState;
 import org.apache.flink.runtime.executiongraph.ExecutionAttemptID;
-import org.apache.flink.runtime.jobgraph.JobType;
 import org.apache.flink.util.clock.ManualClock;
 
 import org.junit.jupiter.api.Test;

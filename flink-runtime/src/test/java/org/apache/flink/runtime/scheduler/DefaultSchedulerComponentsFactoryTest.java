@@ -19,9 +19,9 @@
 
 package org.apache.flink.runtime.scheduler;
 
+import org.apache.flink.api.common.JobType;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.runtime.jobgraph.JobType;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPool;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotPoolUtils;
 import org.apache.flink.runtime.scheduler.strategy.PipelinedRegionSchedulingStrategy;

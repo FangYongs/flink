@@ -18,11 +18,11 @@
 
 package org.apache.flink.runtime.jobmaster;
 
+import org.apache.flink.api.common.JobType;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.JobManagerOptions;
 import org.apache.flink.configuration.SchedulerExecutionMode;
-import org.apache.flink.runtime.jobgraph.JobType;
 import org.apache.flink.runtime.jobmaster.slotpool.PreferredAllocationRequestSlotMatchingStrategy;
 import org.apache.flink.runtime.jobmaster.slotpool.RequestSlotMatchingStrategy;
 import org.apache.flink.runtime.jobmaster.slotpool.SimpleRequestSlotMatchingStrategy;

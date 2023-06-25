@@ -22,6 +22,7 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.table.api.TableResult;
 import org.apache.flink.table.catalog.ContextResolvedTable;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
+import org.apache.flink.table.connector.sink.ModifyType;
 
 import javax.annotation.Nullable;
 
@@ -162,14 +163,5 @@ public class SinkModifyOperation implements ModifyOperation {
                 params,
                 Collections.singletonList(child),
                 Operation::asSummaryString);
-    }
-
-    /** The type of sink modification. */
-    public enum ModifyType {
-        INSERT,
-
-        UPDATE,
-
-        DELETE
     }
 }

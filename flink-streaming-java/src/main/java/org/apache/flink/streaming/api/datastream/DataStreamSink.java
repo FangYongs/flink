@@ -25,6 +25,7 @@ import org.apache.flink.api.common.operators.SlotSharingGroup;
 import org.apache.flink.api.common.operators.util.OperatorValidationUtils;
 import org.apache.flink.api.connector.sink2.Sink;
 import org.apache.flink.api.dag.Transformation;
+import org.apache.flink.api.lineage.LineageRelation;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.flink.streaming.api.operators.ChainingStrategy;
@@ -33,6 +34,8 @@ import org.apache.flink.streaming.api.transformations.LegacySinkTransformation;
 import org.apache.flink.streaming.api.transformations.PhysicalTransformation;
 import org.apache.flink.streaming.api.transformations.SinkTransformation;
 import org.apache.flink.streaming.api.transformations.SinkV1Adapter;
+
+import javax.annotation.Nullable;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -45,6 +48,7 @@ import static org.apache.flink.util.Preconditions.checkNotNull;
 public class DataStreamSink<T> {
 
     private final PhysicalTransformation<T> transformation;
+    @Nullable private LineageRelation lineageRelation;
 
     protected DataStreamSink(PhysicalTransformation<T> transformation) {
         this.transformation = checkNotNull(transformation);
@@ -296,6 +300,11 @@ public class DataStreamSink<T> {
     @PublicEvolving
     public DataStreamSink<T> slotSharingGroup(SlotSharingGroup slotSharingGroup) {
         transformation.setSlotSharingGroup(slotSharingGroup);
+        return this;
+    }
+
+    public DataStreamSink<T> setLineageRelation(LineageRelation lineageRelation) {
+        this.lineageRelation = lineageRelation;
         return this;
     }
 }

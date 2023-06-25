@@ -24,10 +24,13 @@ import org.apache.flink.api.common.operators.util.OperatorValidationUtils;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.connector.source.Boundedness;
 import org.apache.flink.api.connector.source.Source;
+import org.apache.flink.api.lineage.LineageEntity;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.operators.StreamSource;
 import org.apache.flink.streaming.api.transformations.LegacySourceTransformation;
 import org.apache.flink.streaming.api.transformations.SourceTransformation;
+
+import javax.annotation.Nullable;
 
 /**
  * The DataStreamSource represents the starting point of a DataStream.
@@ -38,6 +41,7 @@ import org.apache.flink.streaming.api.transformations.SourceTransformation;
 public class DataStreamSource<T> extends SingleOutputStreamOperator<T> {
 
     private final boolean isParallel;
+    @Nullable private LineageEntity lineageEntity;
 
     public DataStreamSource(
             StreamExecutionEnvironment environment,
@@ -115,6 +119,11 @@ public class DataStreamSource<T> extends SingleOutputStreamOperator<T> {
     public DataStreamSource<T> setParallelism(int parallelism) {
         OperatorValidationUtils.validateParallelism(parallelism, isParallel);
         super.setParallelism(parallelism);
+        return this;
+    }
+
+    public DataStreamSource<T> setLineageEntity(LineageEntity lineageEntity) {
+        this.lineageEntity = lineageEntity;
         return this;
     }
 }

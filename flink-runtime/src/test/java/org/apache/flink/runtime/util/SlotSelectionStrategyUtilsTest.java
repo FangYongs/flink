@@ -18,9 +18,9 @@
 
 package org.apache.flink.runtime.util;
 
+import org.apache.flink.api.common.JobType;
 import org.apache.flink.configuration.CheckpointingOptions;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.runtime.jobgraph.JobType;
 import org.apache.flink.runtime.jobmaster.slotpool.LocationPreferenceSlotSelectionStrategy;
 import org.apache.flink.runtime.jobmaster.slotpool.PreviousAllocationSlotSelectionStrategy;
 import org.apache.flink.runtime.jobmaster.slotpool.SlotSelectionStrategy;

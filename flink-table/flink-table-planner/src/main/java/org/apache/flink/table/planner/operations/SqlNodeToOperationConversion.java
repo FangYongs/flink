@@ -106,6 +106,7 @@ import org.apache.flink.table.catalog.exceptions.DatabaseNotExistException;
 import org.apache.flink.table.catalog.exceptions.TableNotExistException;
 import org.apache.flink.table.catalog.exceptions.TableNotPartitionedException;
 import org.apache.flink.table.connector.sink.DynamicTableSink;
+import org.apache.flink.table.connector.sink.ModifyType;
 import org.apache.flink.table.connector.sink.abilities.SupportsDeletePushDown;
 import org.apache.flink.table.connector.source.abilities.SupportsRowLevelModificationScan;
 import org.apache.flink.table.expressions.CallExpression;
@@ -1344,7 +1345,7 @@ public class SqlNodeToOperationConversion {
                 contextResolvedTable,
                 queryOperation,
                 null, // targetColumns
-                SinkModifyOperation.ModifyType.DELETE);
+                ModifyType.DELETE);
     }
 
     private Operation convertUpdate(SqlUpdate sqlUpdate) {
@@ -1371,7 +1372,7 @@ public class SqlNodeToOperationConversion {
                 contextResolvedTable,
                 queryOperation,
                 columnIndices,
-                SinkModifyOperation.ModifyType.UPDATE);
+                ModifyType.UPDATE);
     }
 
     private int[][] getTargetColumnIndices(

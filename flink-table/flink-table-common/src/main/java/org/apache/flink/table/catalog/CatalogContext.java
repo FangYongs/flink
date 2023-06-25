@@ -16,15 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.flink.runtime.jobgraph;
+package org.apache.flink.table.catalog;
 
-/** Enum to distinguish JobGraphs between batch and streaming, currently used by the scheduler. */
-public enum JobType {
-    /** Batch jobs are finite jobs, potentially consisting of multiple pipelined regions. */
-    BATCH,
-    /**
-     * Streaming jobs are infinite jobs, consisting of one large pipelined region, not separated by
-     * any blocking data exchanges.
-     */
-    STREAMING
+import org.apache.flink.configuration.Configuration;
+
+import java.util.Optional;
+
+/** Context for catalog modification and job lineage events. */
+public interface CatalogContext {
+    /* The name of catalog. */
+    String getCatalogName();
+
+    /* Class of the catalog. */
+    Class<? extends Catalog> getCatalogClass();
+
+    /* Identifier for the catalog from catalog factory, such as jdbc/iceberg/paimon. */
+    Optional<String> getFactoryIdentifier();
+
+    /* Config for catalog. */
+    Configuration getConfiguration();
 }

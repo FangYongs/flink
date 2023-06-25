@@ -20,6 +20,7 @@ package org.apache.flink.table.operations;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.table.catalog.ContextResolvedTable;
+import org.apache.flink.table.connector.sink.ModifyType;
 import org.apache.flink.table.connector.sink.abilities.SupportsDeletePushDown;
 import org.apache.flink.table.expressions.ResolvedExpression;
 import org.apache.flink.util.Preconditions;

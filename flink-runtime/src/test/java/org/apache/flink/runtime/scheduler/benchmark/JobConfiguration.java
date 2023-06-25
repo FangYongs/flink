@@ -19,10 +19,10 @@
 package org.apache.flink.runtime.scheduler.benchmark;
 
 import org.apache.flink.api.common.ExecutionMode;
+import org.apache.flink.api.common.JobType;
 import org.apache.flink.configuration.JobManagerOptions.HybridPartitionDataConsumeConstraint;
 import org.apache.flink.runtime.io.network.partition.ResultPartitionType;
 import org.apache.flink.runtime.jobgraph.DistributionPattern;
-import org.apache.flink.runtime.jobgraph.JobType;
 
 /**
  * {@link JobConfiguration} contains the configuration of a STREAMING/BATCH job. It concludes {@link
