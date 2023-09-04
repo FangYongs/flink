@@ -221,4 +221,17 @@ class TableSourceTable(
       flinkTypeFactory,
       abilitySpecs)
   }
+
+  def copy(snapshot: Long): TableSourceTable = {
+    new TableSourceTable(
+      relOptSchema,
+      rowType,
+      statistic,
+      tableSource,
+      isStreamingMode,
+      contextResolvedTable.copy(snapshot),
+      flinkContext,
+      flinkTypeFactory,
+      abilitySpecs)
+  }
 }

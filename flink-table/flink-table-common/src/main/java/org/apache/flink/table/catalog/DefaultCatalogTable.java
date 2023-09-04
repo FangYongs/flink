@@ -104,6 +104,12 @@ public class DefaultCatalogTable implements CatalogTable {
     }
 
     @Override
+    public CatalogTable copy(Long snapshot) {
+        checkArgument(this.snapshot == null);
+        return new DefaultCatalogTable(schema, comment, partitionKeys, options, snapshot);
+    }
+
+    @Override
     public Optional<String> getDescription() {
         return Optional.of(getComment());
     }

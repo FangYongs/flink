@@ -166,6 +166,16 @@ public final class ContextResolvedTable {
                 false);
     }
 
+    public ContextResolvedTable copy(long snapshot) {
+        return new ContextResolvedTable(
+                objectIdentifier,
+                catalog,
+                new ResolvedCatalogTable(
+                        ((CatalogTable) resolvedTable.getOrigin()).copy(snapshot),
+                        resolvedTable.getResolvedSchema()),
+                false);
+    }
+
     /**
      * This method tries to return the connector name of the table, trying to provide a bit more
      * helpful toString for anonymous tables. It's only to help users to debug, and its return value

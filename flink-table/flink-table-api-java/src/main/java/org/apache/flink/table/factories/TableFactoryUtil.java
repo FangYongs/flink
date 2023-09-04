@@ -30,6 +30,7 @@ import org.apache.flink.table.catalog.CommonCatalogOptions;
 import org.apache.flink.table.catalog.ObjectIdentifier;
 import org.apache.flink.table.catalog.listener.CatalogModificationListener;
 import org.apache.flink.table.catalog.listener.CatalogModificationListenerFactory;
+import org.apache.flink.table.delegation.TableSnapshotVisitorFactory;
 import org.apache.flink.table.descriptors.ConnectorDescriptorValidator;
 import org.apache.flink.table.descriptors.DescriptorProperties;
 import org.apache.flink.table.sinks.TableSink;
@@ -41,6 +42,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /** Utility for dealing with {@link TableFactory} using the {@link TableFactoryService}. */
@@ -245,5 +247,12 @@ public class TableFactoryUtil {
                 new FactoryUtil.DefaultCatalogStoreContext(options, configuration, classLoader);
 
         return context;
+    }
+
+    public static TableSnapshotVisitorFactory buildVisitorFactory(ClassLoader classLoader) {
+        return FactoryUtil.discoverFactory(
+                        classLoader,
+                        TableSnapshotVisitorFactory.class,
+                        TableSnapshotVisitorFactory.DEFAULT_IDENTIFIER);
     }
 }

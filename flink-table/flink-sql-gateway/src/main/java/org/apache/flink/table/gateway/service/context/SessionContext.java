@@ -27,7 +27,6 @@ import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.config.TableConfigOptions;
 import org.apache.flink.table.catalog.Catalog;
 import org.apache.flink.table.catalog.CatalogManager;
-import org.apache.flink.table.catalog.CatalogStore;
 import org.apache.flink.table.catalog.CatalogStoreHolder;
 import org.apache.flink.table.catalog.FunctionCatalog;
 import org.apache.flink.table.catalog.GenericInMemoryCatalog;
@@ -36,6 +35,7 @@ import org.apache.flink.table.factories.TableFactoryUtil;
 import org.apache.flink.table.gateway.api.endpoint.EndpointVersion;
 import org.apache.flink.table.gateway.api.session.SessionEnvironment;
 import org.apache.flink.table.gateway.api.session.SessionHandle;
+import org.apache.flink.table.gateway.api.table.TableSnapshotProvider;
 import org.apache.flink.table.gateway.api.utils.SqlGatewayException;
 import org.apache.flink.table.gateway.service.operation.OperationExecutor;
 import org.apache.flink.table.gateway.service.operation.OperationManager;
@@ -60,6 +60,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -84,6 +85,7 @@ public class SessionContext {
 
     private boolean isStatementSetState;
     private final List<ModifyOperation> statementSetOperations;
+    private final Optional<TableSnapshotProvider> tableSnapshotProvider;
 
     protected SessionContext(
             DefaultContext defaultContext,
@@ -102,6 +104,7 @@ public class SessionContext {
         this.operationManager = operationManager;
         this.isStatementSetState = false;
         this.statementSetOperations = new ArrayList<>();
+        this.tableSnapshotProvider = Optional.empty();
     }
 
     // --------------------------------------------------------------------------------------------
@@ -134,6 +137,10 @@ public class SessionContext {
 
     public URLClassLoader getUserClassloader() {
         return userClassloader;
+    }
+
+    public Optional<TableSnapshotProvider> getTableSnapshotProvider() {
+        return tableSnapshotProvider;
     }
 
     public void set(String key, String value) {
@@ -290,13 +297,31 @@ public class SessionContext {
                 buildModuleManager(
                         environment, configuration, resourceManager.getUserClassLoader());
 
+        CatalogStoreFactory catalogStoreFactory =
+                TableFactoryUtil.findAndCreateCatalogStoreFactory(
+                        configuration, resourceManager.getUserClassLoader());
+        CatalogStoreFactory.Context catalogStoreFactoryContext =
+                TableFactoryUtil.buildCatalogStoreFactoryContext(
+                        configuration, resourceManager.getUserClassLoader());
+        catalogStoreFactory.open(catalogStoreFactoryContext);
+        CatalogStoreHolder catalogStore =
+                CatalogStoreHolder.newBuilder()
+                        .catalogStore(catalogStoreFactory.createCatalogStore())
+                        .classloader(resourceManager.getUserClassLoader())
+                        .config(configuration)
+                        .factory(catalogStoreFactory)
+                        .build();
         final CatalogManager catalogManager =
                 buildCatalogManager(
-                        configuration, resourceManager.getUserClassLoader(), environment);
+                        catalogStore,
+                        configuration,
+                        resourceManager.getUserClassLoader(),
+                        environment);
 
         final FunctionCatalog functionCatalog =
                 new FunctionCatalog(configuration, resourceManager, catalogManager, moduleManager);
-        return new SessionState(catalogManager, moduleManager, resourceManager, functionCatalog);
+        return new SessionState(
+                catalogStore, catalogManager, moduleManager, resourceManager, functionCatalog);
     }
 
     private static ModuleManager buildModuleManager(
@@ -322,16 +347,10 @@ public class SessionContext {
     }
 
     private static CatalogManager buildCatalogManager(
+            CatalogStoreHolder catalogStoreHolder,
             Configuration configuration,
             URLClassLoader userClassLoader,
             SessionEnvironment environment) {
-
-        CatalogStoreFactory catalogStoreFactory =
-                TableFactoryUtil.findAndCreateCatalogStoreFactory(configuration, userClassLoader);
-        CatalogStoreFactory.Context catalogStoreFactoryContext =
-                TableFactoryUtil.buildCatalogStoreFactoryContext(configuration, userClassLoader);
-        catalogStoreFactory.open(catalogStoreFactoryContext);
-        CatalogStore catalogStore = catalogStoreFactory.createCatalogStore();
 
         CatalogManager.Builder builder =
                 CatalogManager.newBuilder()
@@ -341,13 +360,7 @@ public class SessionContext {
                         .catalogModificationListeners(
                                 TableFactoryUtil.findCatalogModificationListenerList(
                                         configuration, userClassLoader))
-                        .catalogStoreHolder(
-                                CatalogStoreHolder.newBuilder()
-                                        .catalogStore(catalogStore)
-                                        .classloader(userClassLoader)
-                                        .config(configuration)
-                                        .factory(catalogStoreFactory)
-                                        .build());
+                        .catalogStoreHolder(catalogStoreHolder);
 
         // init default catalog
         String defaultCatalogName;
@@ -403,15 +416,18 @@ public class SessionContext {
     public static class SessionState {
 
         public final CatalogManager catalogManager;
+        public final CatalogStoreHolder catalogStoreHolder;
         public final ResourceManager resourceManager;
         public final FunctionCatalog functionCatalog;
         public final ModuleManager moduleManager;
 
         public SessionState(
+                CatalogStoreHolder catalogStoreHolder,
                 CatalogManager catalogManager,
                 ModuleManager moduleManager,
                 ResourceManager resourceManager,
                 FunctionCatalog functionCatalog) {
+            this.catalogStoreHolder = catalogStoreHolder;
             this.catalogManager = catalogManager;
             this.moduleManager = moduleManager;
             this.resourceManager = resourceManager;

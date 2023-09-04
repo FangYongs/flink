@@ -128,6 +128,15 @@ public interface CatalogTable extends CatalogBaseTable {
     CatalogTable copy(Map<String, String> options);
 
     /**
+     * Returns a copy of this {@code CatalogTable} with given table snapshot.
+     *
+     * @return a new copy of this table with replaced table snapshot
+     */
+    default CatalogTable copy(Long snapshot) {
+        return this;
+    }
+
+    /**
      * Serializes this instance into a map of string-based properties.
      *
      * <p>Compared to the pure table options in {@link #getOptions()}, the map includes schema,
