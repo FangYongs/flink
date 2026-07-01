@@ -16,8 +16,9 @@
  * limitations under the License.
  */
 
-import { DecimalPipe, NgForOf, NgIf } from '@angular/common';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Inject, OnDestroy, OnInit, Type } from '@angular/core';
+import { DecimalPipe, NgForOf, NgIf } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { of, Subject } from 'rxjs';
 import { catchError, mergeMap, takeUntil } from 'rxjs/operators';
 
@@ -42,6 +43,7 @@ import { JobService } from '@flink-runtime-web/services';
 import { typeDefinition } from '@flink-runtime-web/utils';
 import { NzTableModule, NzTableSortFn } from 'ng-zorro-antd/table';
 import { NzTabsModule } from 'ng-zorro-antd/tabs';
+import { NzInputModule } from 'ng-zorro-antd/input';
 
 import { JobLocalService } from '../../job-local.service';
 
@@ -53,6 +55,7 @@ function createSortFn(selector: (item: JobVertexSubTask) => number | string): Nz
   selector: 'flink-job-overview-drawer-subtasks',
   templateUrl: './job-overview-drawer-subtasks.component.html',
   styleUrls: ['./job-overview-drawer-subtasks.component.less'],
+  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     NzTabsModule,
@@ -64,7 +67,9 @@ function createSortFn(selector: (item: JobVertexSubTask) => number | string): Nz
     HumanizeDurationPipe,
     DynamicHostComponent,
     NgForOf,
-    TableAggregatedMetricsComponent
+    TableAggregatedMetricsComponent,
+    NzInputModule,
+    FormsModule
   ]
 })
 export class JobOverviewDrawerSubtasksComponent implements OnInit, OnDestroy {
@@ -84,6 +89,8 @@ export class JobOverviewDrawerSubtasksComponent implements OnInit, OnDestroy {
 
   expandSet = new Set<number>();
   listOfTask: JobVertexSubTask[] = [];
+  filteredListOfTask: JobVertexSubTask[] = [];
+  filterText = '';
   aggregated?: JobVertexAggregated;
   isLoading = true;
   actionComponent: Type<unknown>;
@@ -120,6 +127,7 @@ export class JobOverviewDrawerSubtasksComponent implements OnInit, OnDestroy {
       )
       .subscribe(data => {
         this.listOfTask = data?.subtasks || [];
+        this.applyFilter();
         this.aggregated = data?.aggregated;
         this.isLoading = false;
         this.cdr.markForCheck();
@@ -143,6 +151,71 @@ export class JobOverviewDrawerSubtasksComponent implements OnInit, OnDestroy {
       this.expandSet.delete(subtask.subtask);
     }
     this.cdr.markForCheck();
+  }
+
+  applyFilter(): void {
+    if (!this.filterText.trim()) {
+      this.filteredListOfTask = this.listOfTask;
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const filterParams = this.parseFilterText(this.filterText);
+    this.filteredListOfTask = this.listOfTask.filter(task => this.matchesFilter(task, filterParams));
+    this.cdr.markForCheck();
+  }
+
+  private parseFilterText(text: string): { ids: Set<number>; hosts: Set<string> } {
+    const params = { ids: new Set<number>(), hosts: new Set<string>() };
+    const parts = text.split(';');
+
+    parts.forEach(part => {
+      const [key, value] = part.split(':');
+      if (key && value) {
+        const trimmedKey = key.trim().toLowerCase();
+        const values = value.split(',').map(v => v.trim());
+
+        if (trimmedKey === 'id') {
+          values.forEach(v => {
+            const num = parseInt(v, 10);
+            if (!isNaN(num)) {
+              params.ids.add(num);
+            }
+          });
+        } else if (trimmedKey === 'host') {
+          values.forEach(v => {
+            if (v) {
+              params.hosts.add(v.toLowerCase());
+            }
+          });
+        }
+      }
+    });
+
+    return params;
+  }
+
+  private matchesFilter(task: JobVertexSubTask, filterParams: { ids: Set<number>; hosts: Set<string> }): boolean {
+    if (filterParams.ids.size > 0 && !filterParams.ids.has(task.subtask)) {
+      return false;
+    }
+
+    if (filterParams.hosts.size > 0) {
+      const endpoint = task.endpoint || '';
+      const endpointLower = endpoint.toLowerCase();
+      let matched = false;
+      for (const host of filterParams.hosts) {
+        if (endpointLower.includes(host)) {
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   convertStatusDuration(statusDuration: JobVertexStatusDuration<number>): Array<{ state: string; duration: number }> {

@@ -17,18 +17,22 @@
   -->
 <nz-tabs [nzTabBarGutter]="16" [nzSize]="'small'">
   <nz-tab nzTitle="Subtask Metrics">
-    <nz-table
-      nzSize="small"
-      [nzLoading]="isLoading"
-      [nzData]="listOfTask"
-      [nzScroll]="{ x: '2210px', y: 'calc(100% - 36px)' }"
-      [nzFrontPagination]="false"
-      [nzShowPagination]="false"
-      [nzVirtualItemSize]="36"
-      [nzVirtualMinBufferPx]="720"
-      [nzVirtualMaxBufferPx]="720"
-      [nzVirtualForTrackBy]="trackBySubtask"
-    >
+    <div class="subtask-metrics-wrapper">
+      <div class="filter-input">
+        <input nz-input [(ngModel)]="filterText" placeholder="Filter: id:1,2,3;host:h1,h2" (blur)="applyFilter()">
+      </div>
+      <nz-table
+        nzSize="small"
+        [nzLoading]="isLoading"
+        [nzData]="filteredListOfTask"
+        [nzScroll]="{ x: '2210px', y: 'calc(100% - 36px)' }"
+        [nzFrontPagination]="false"
+        [nzShowPagination]="false"
+        [nzVirtualItemSize]="36"
+        [nzVirtualMinBufferPx]="720"
+        [nzVirtualMaxBufferPx]="720"
+        [nzVirtualForTrackBy]="trackBySubtask"
+      >
       <thead>
         <tr>
           <th nzWidth="120px" nzLeft>ID</th>
@@ -200,7 +204,8 @@
           </ng-container>
         </ng-template>
       </tbody>
-    </nz-table>
+      </nz-table>
+    </div>
   </nz-tab>
   <nz-tab nzTitle="Aggregated Metrics">
     <flink-table-aggregated-metrics

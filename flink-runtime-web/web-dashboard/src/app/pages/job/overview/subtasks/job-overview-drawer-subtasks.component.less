@@ -31,6 +31,22 @@
     height: 100%;
   }
 
+  .subtask-metrics-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+
+    .filter-input {
+      flex-shrink: 0;
+      margin-bottom: 12px;
+    }
+
+    nz-table {
+      flex: 1;
+      min-height: 0;
+    }
+  }
+
   ::ng-deep {
     .ant-table-row-indent {
       padding-left: 0 !important;
